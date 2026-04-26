@@ -1,0 +1,165 @@
+---
+title: "Compliance & Security"
+description: "AlgoVoi compliance overview for developers — what we do, where the full binder lives, and how to request the NDA-tier documents."
+---
+
+This page is the developer-facing summary. The **canonical** compliance hub is
+[`algovoi.co.uk/AlgoVoi/compliance.html`](https://algovoi.co.uk/AlgoVoi/compliance.html),
+which carries the full status-badge dashboard, document binder, and DD-pack
+request CTA.
+
+## At a glance
+
+<CardGroup cols={2}>
+  <Card title="No custody" icon="shield-check">
+    Settlement is direct on-chain customer-wallet to merchant-wallet. AlgoVoi
+    never holds, controls, or transmits funds.
+  </Card>
+  <Card title="KYC at-rest encryption" icon="key">
+    KYC/KYB documents are encrypted at the application layer with a versioned
+    Fernet scheme using a key separate from the general database key.
+  </Card>
+  <Card title="UK-only operating perimeter" icon="map-pin">
+    Enforced as a contractual control. Out-of-perimeter onboarding is
+    declined unless escalated.
+  </Card>
+  <Card title="Sanctions + PEP screening" icon="magnifying-glass">
+    UK / EU / US / UN list coverage at onboarding and on material updates.
+  </Card>
+</CardGroup>
+
+## Regulatory position
+
+AlgoVoi has self-assessed against FCA Policy Statement PS19/22 ("Guidance on
+Cryptoassets") and concludes that its **core business proposition** —
+payment-message infrastructure between self-custodial wallets — falls
+outside MLR Schedule 6A registration as a cryptoasset exchange provider or
+custodian wallet provider. A formal external legal opinion is in
+preparation.
+
+| Framework | Status |
+|---|---|
+| UK MLRs 2017 (voluntary alignment) | Active |
+| FCA MLR Sch 6A registration | Out of scope per PS19/22 self-assessment; legal opinion in preparation |
+| UK GDPR / DPA 2018 | Aligned |
+| HMT Cryptoasset Travel Rule | Not in scope under current architecture |
+| FSMA 2023 SI regime | Monitoring (~2027) |
+| HMRC CARF | Assessment in progress |
+| ICO data-controller registration | In preparation |
+| Cyber Essentials | Planned Q3 2026 |
+| SOC 2 Type I | Targeted Q3 2026 |
+
+## Public policy library
+
+All policies live in
+[`chopmob-cloud/AlgoVoi-Platform-Adapters/compliance/`](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/compliance).
+Tier B documents have a public summary in the same directory; full
+documents are available under NDA.
+
+### Tier A — fully public
+
+<CardGroup cols={2}>
+  <Card title="Information Security Policy" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/INFORMATION_SECURITY_POLICY.md">
+    Defence in depth, classification, encryption, vulnerability management.
+  </Card>
+  <Card title="Access Control" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/ACCESS_CONTROL_POLICY.md">
+    Least privilege, MFA, SSH key management, quarterly access reviews.
+  </Card>
+  <Card title="Change Management" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/CHANGE_MANAGEMENT_POLICY.md">
+    Git-based workflow, code review, rollback, emergency-change discipline.
+  </Card>
+  <Card title="Incident Response Plan" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/INCIDENT_RESPONSE_PLAN.md">
+    Severity levels, containment playbook, blameless post-mortems.
+  </Card>
+  <Card title="Business Continuity & DR" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/BUSINESS_CONTINUITY_PLAN.md">
+    RTO/RPO, backup strategy, disaster scenarios, annual DR drill.
+  </Card>
+  <Card title="Vendor Management" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/VENDOR_MANAGEMENT_POLICY.md">
+    Subprocessor register, onboarding criteria, breach notification.
+  </Card>
+  <Card title="Acceptable Use" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/ACCEPTABLE_USE_POLICY.md">
+    Confidentiality, device hygiene, AI tooling rules, reporting.
+  </Card>
+  <Card title="AML / CTF Policy" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/AML_POLICY.md">
+    Three-line-of-defence model, MLRO, regulatory position, BWRA approach.
+  </Card>
+  <Card title="DPA Template" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/DPA_TEMPLATE.md">
+    Article 28 DPA template aligned to UK GDPR, DPA 2018, UK IDTA / SCCs.
+  </Card>
+  <Card title="Data Breach Procedure" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/DATA_BREACH_PROCEDURE.md">
+    Detect, contain, assess, notify (72-hour ICO), remediate, review.
+  </Card>
+  <Card title="Complaints Procedure" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/COMPLAINTS_PROCEDURE.md">
+    Channels, timelines, escalation routes (ICO, FCA, OFSI, Action Fraud).
+  </Card>
+  <Card title="Retention Procedure" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/RETENTION_PROCEDURE.md">
+    Per-category retention, erasure handling, backup ageing.
+  </Card>
+</CardGroup>
+
+### Tier B — public summary; full document under NDA
+
+<CardGroup cols={2}>
+  <Card title="Business-Wide Risk Assessment (BWRA)" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/BWRA.md">
+    UK MLR Reg 18 — risk dimensions, headline conclusions, residual risk.
+  </Card>
+  <Card title="CDD / EDD Procedure" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/CDD_EDD_PROCEDURE.md">
+    Standard CDD, EDD triggers, KYC-unlocks-mainnet gate, ongoing monitoring.
+  </Card>
+  <Card title="Transaction Monitoring Procedure" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/TRANSACTION_MONITORING_PROCEDURE.md">
+    Rule families, alert handling, segregation of duties, tuning cadence.
+  </Card>
+  <Card title="Record of Processing Activities (RoPA)" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/ROPA.md">
+    Article 30 RoPA — controller / processor split, lawful bases, retention.
+  </Card>
+  <Card title="Customer Risk Scoring Matrix" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/CUSTOMER_RISK_SCORING_MATRIX.md">
+    Risk dimensions, banding, decision overrides, re-scoring cadence.
+  </Card>
+  <Card title="Sanctions Screening Procedure" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/SANCTIONS_PROCEDURE.md">
+    UK / EU / US / UN coverage, match handling, OFSI reporting trigger.
+  </Card>
+  <Card title="PEP Screening Procedure" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/PEP_SCREENING_PROCEDURE.md">
+    PEP definitions, FCA FG17/6 risk-based handling, EDD checklist.
+  </Card>
+</CardGroup>
+
+## Travel Rule and A2A
+
+The UK HMT Cryptoasset Travel Rule applies to FCA-registered cryptoasset
+businesses making cryptoasset transfers above £1,000. AlgoVoi is not an
+FCA-registered cryptoasset business and does not initiate or receive
+transfers on its own account; settlement is direct wallet-to-wallet on
+public blockchains. AlgoVoi is consequently not a Travel Rule originator
+or beneficiary institution.
+
+For agent-to-agent (A2A) flows, the same KYC-unlocks-mainnet gate,
+sanctions and PEP screening, and transaction monitoring apply to
+AI-initiated payments as to human-initiated ones. AI agents inherit
+their tenant's risk tier; an agent cannot transact on behalf of a tenant
+whose mainnet access is not active. See [Concepts → KYC and mainnet](/concepts/kyc-and-mainnet).
+
+## Subprocessors
+
+| Vendor | Purpose |
+|---|---|
+| Cloudflare | CDN, WAF, DDoS, TLS termination |
+| Vultr | Production compute and database hosting |
+| GitHub | Source code and CI |
+| Mintlify | Public docs hosting (this site) |
+| Let's Encrypt | TLS certificate issuance |
+| Sanctions list providers | UK / EU / US / UN data |
+| Public RPC providers | On-chain verification |
+
+## Reporting a vulnerability
+
+Email **security@algovoi.co.uk** or consult
+[`/.well-known/security.txt`](https://algovoi.co.uk/.well-known/security.txt).
+Acknowledgement target: **1 business day**. Triage outcome: **3 business days**.
+
+## Request the full DD pack under NDA
+
+Email **security@algovoi.co.uk** with your organisation, contact, and the
+documents you need. The pack covers every Tier B document in full,
+sample-tested cases, the BWRA with residual risk scores, the executed
+legal opinion when delivered, and the SOC 2 evidence package as it
+builds.
