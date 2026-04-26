@@ -1,0 +1,47 @@
+---
+title: Stellar
+description: USDC and XLM on Stellar mainnet and testnet. Short text-memo binding with the 28-byte MEMO_TEXT limit.
+---
+
+## At a glance
+
+| | Mainnet | Testnet |
+| --- | --- | --- |
+| Network ID | `stellar:mainnet` | `stellar:testnet` |
+| Native asset | XLM | XLM |
+| Native decimals | 7 | 7 |
+| Stablecoin | USDC (Circle issuer) | USDC (Circle test issuer) |
+| Stablecoin asset ID format | `USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN` | (testnet issuer) |
+| Stablecoin decimals | 7 | 7 |
+| Confirmation time | About 5 seconds | About 5 seconds |
+| Typical fee | 0.00001 XLM | Free (Friendbot) |
+| Verification source | Horizon API | Horizon API |
+
+## Memo binding
+
+Stellar's `MEMO_TEXT` field is capped at **28 bytes UTF-8**. The standard `algovoi:{token}` (32-char token plus prefix) doesn't fit. AlgoVoi uses a shortened form: `av:{token[:20]}` for Stellar checkouts, which fits inside the 28-byte limit.
+
+The verifier reads this short prefix from `MEMO_TEXT` and looks up the token in the active links table.
+
+`MEMO_HASH` and `MEMO_ID` are not used.
+
+## Trustlines
+
+Stellar requires a **trustline** for any non-native asset. A new payout address must establish a trustline to USDC (Circle issuer `GA5ZSEJY…`) before receiving payments. The dashboard validates the trustline when you save the address.
+
+For multi-asset support (USDC plus XLM payouts), you need separate trustlines for each non-native asset.
+
+## Path payments and fee bumps
+
+Stellar's `path_payment` and `fee_bump_transaction` operations are supported by the verifier. If your customer pays in EURC and you accept USDC, the on-chain path-payment delivers USDC to your address and the verifier sees only the destination leg.
+
+## Wallets
+
+- [Lobstr](https://lobstr.co)
+- [Freighter](https://freighter.app) (browser extension)
+- [Solar Wallet](https://solarwallet.io)
+
+## See also
+
+- [x402 protocol](/protocols/x402) for the payment protocol layer
+- [Concept: chains overview](/concepts/chains-overview) for cross-chain comparison

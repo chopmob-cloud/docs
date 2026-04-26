@@ -1,0 +1,41 @@
+---
+title: Hedera
+description: USDC HTS on Hedera mainnet and testnet. Memo-bound checkouts via the Mirror Node API.
+---
+
+## At a glance
+
+| | Mainnet | Testnet |
+| --- | --- | --- |
+| Network ID | `hedera:mainnet` | `hedera:testnet` |
+| Native asset | HBAR | HBAR |
+| Native decimals | 8 | 8 |
+| Stablecoin | USDC (HTS token) | USDC (HTS token) |
+| Stablecoin token ID | `0.0.456858` | (testnet equivalent) |
+| Stablecoin decimals | 6 | 6 |
+| Confirmation time | About 5 seconds | About 5 seconds |
+| Typical fee | $0.0001 | Free (testnet faucet) |
+| Verification source | Hedera Mirror Node | Hedera Mirror Node |
+
+## Memo binding
+
+Hedera transactions carry a transaction memo (up to 100 bytes). AlgoVoi uses `algovoi:{token}` in the memo field to bind payments to a specific checkout. The Mirror Node exposes the memo on the transaction record, so verification reads it directly.
+
+## Token associations
+
+Like Algorand ASAs, Hedera HTS tokens require **token association** before an account can receive them. A new payout address won't automatically accept USDC, you have to associate `0.0.456858` first. The dashboard validates association when you save the address and refuses to save unless association succeeded.
+
+## Wallets
+
+- [HashPack](https://hashpack.app)
+- [Blade](https://bladewallet.io)
+- [Kabila Wallet](https://wallet.kabila.app)
+
+## Mirror Node
+
+Hedera doesn't have a public mempool. AlgoVoi's verifier uses the [Mirror Node API](https://docs.hedera.com/hedera/sdks-and-apis/rest-api) to read transaction records. The default endpoint is `https://mainnet-public.mirrornode.hedera.com` for mainnet, with the testnet equivalent for testnet checkouts.
+
+## See also
+
+- [x402 protocol](/protocols/x402) for the payment protocol layer
+- [Concept: chains overview](/concepts/chains-overview)

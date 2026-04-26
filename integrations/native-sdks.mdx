@@ -1,0 +1,63 @@
+---
+title: Native SDKs
+description: Zero-dependency libraries for Go, PHP, Python, and Rust. Drop one file in and you're integrated.
+---
+
+The native SDKs are deliberately tiny. Each is a single file, standard-library only, no package-manager install needed. They cover the three things every integration does: create a hosted checkout, verify a webhook, and check a payment's status.
+
+## Available SDKs
+
+| Language | What it covers | Source |
+| --- | --- | --- |
+| **Go** | HTTP server integration with the standard library | [native-go](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/native-go) |
+| **PHP** | Any PHP application without Composer | [native-php](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/native-php) |
+| **Python** | Any Python web app without pip | [native-python](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/native-python) |
+| **Rust** | Any Rust HTTP server (stdlib only, no crates) | [native-rust](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/native-rust) |
+
+## What you get
+
+Each SDK exposes the same three methods:
+
+- `create_checkout(amount, currency, label, network)` returns a hosted-checkout URL.
+- `verify_payment(token)` polls the gateway for status.
+- `verify_webhook(raw_body, signature_header, secret)` checks an inbound webhook's HMAC and timestamp.
+
+## Python example
+
+```python
+from algovoi import AlgoVoi
+
+client = AlgoVoi(
+    api_base="https://api1.ilovechicken.co.uk",
+    api_key="algv_…",
+    tenant_id="…",
+    webhook_secret="algvw_…",
+)
+
+# Create a checkout
+link = client.create_checkout(amount=5.00, currency="USD", label="Order #1234")
+print(link.checkout_url)
+
+# Later, verify the inbound webhook in your Flask handler
+def webhook():
+    raw = request.get_data()
+    sig = request.headers.get("X-AlgoVoi-Signature", "")
+    event = client.verify_webhook(raw, sig)
+    if not event:
+        return "", 401
+    # Process event["data"]["tx_id"], event["data"]["amount_microunits"], etc.
+    return "", 200
+```
+
+## When to use a native SDK
+
+- Your platform doesn't have a dedicated adapter
+- You don't want to add a dependency
+- You're integrating from a serverless function with cold-start budget concerns
+
+For platforms we already cover, the [framework adapters](/integrations/ai-frameworks), [e-commerce modules](/integrations/ecommerce), and [no-code platforms](/integrations/no-code) save you the boilerplate.
+
+## See also
+
+- [Quickstart](/quickstart) for the create-checkout flow end to end
+- [Outbound webhooks](/integrations/outbound-webhooks) for the full event schema and HMAC scheme

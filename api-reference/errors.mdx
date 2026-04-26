@@ -1,0 +1,62 @@
+---
+title: Errors
+description: JSON error envelope, HTTP status mapping, common error codes.
+---
+
+## The envelope
+
+All errors share the same JSON shape:
+
+```json
+{
+  "error": "machine_readable_code",
+  "message": "Human-readable explanation",
+  "request_id": "req_abc123…",
+  "...": "additional context fields where useful"
+}
+```
+
+`error` is a stable string suitable for branching in your code. `message` is human-readable and may change wording across releases. `request_id` matches the `X-Request-Id` header on the response.
+
+## HTTP status codes
+
+| Status | Meaning | Examples |
+| --- | --- | --- |
+| **200** | Success | Normal response |
+| **201** | Created | After `POST /v1/payment-links` |
+| **400** | Bad request | Invalid JSON, missing required field |
+| **401** | Unauthorised | Missing or invalid API key |
+| **402** | Payment Required | x402 / MPP / AP2 challenge response |
+| **403** | Forbidden | Key lacks the required scope |
+| **404** | Not found | Unknown checkout token, unknown resource |
+| **409** | Conflict | Duplicate idempotency key, double-spend on a tx_id |
+| **422** | Unprocessable | Schema is valid but the action can't proceed (e.g. KYC required for mainnet) |
+| **429** | Too many requests | Rate-limited. See [Rate limits](/api-reference/rate-limits). |
+| **5xx** | Server error | Gateway, facilitator, or upstream chain RPC unavailable |
+
+## Common error codes
+
+| Code | When | HTTP |
+| --- | --- | --- |
+| `invalid_api_key` | Bearer token is missing or doesn't match a known key | 401 |
+| `tenant_id_mismatch` | The `X-Tenant-Id` header doesn't match the key's tenant | 403 |
+| `kyb_required_for_mainnet` | Trial tenant tried a live network | 422 |
+| `payment_link_expired` | Customer tried to verify a checkout past its TTL | 422 |
+| `payment_link_already_paid` | Same checkout verified twice | 409 |
+| `payment_not_verified` | Facilitator couldn't confirm the on-chain transaction | 422 |
+| `self_payment_blocked` | Payer address equals payout address | 403 |
+| `unsupported_network` | The chain isn't enabled for this tenant | 400 |
+| `cross_tenant_replay` | Tx ID already used by a different tenant | 422 |
+| `rate_limited` | Per-tenant or per-IP rate limit hit | 429 |
+
+## Behaviour expectations
+
+- **4xx errors** indicate a problem the caller can fix. Don't retry without changing something.
+- **5xx errors** are server-side. The client should retry with backoff. Default Retry-After is 30 seconds.
+- **402 challenges** are not errors per se. They're the start of an x402 / MPP / AP2 payment flow. See the protocol pages.
+
+## See also
+
+- [API introduction](/api-reference/introduction) for the request envelope
+- [Rate limits](/api-reference/rate-limits) for 429 specifics
+- [Authentication](/api-reference/authentication) for 401 versus 403

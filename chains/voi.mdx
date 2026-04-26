@@ -1,0 +1,46 @@
+---
+title: VOI
+description: aUSDC ARC-200 on VOI mainnet and testnet. Algorand-fork architecture with sub-cent fees and ARC-200 token semantics.
+---
+
+## At a glance
+
+| | Mainnet | Testnet |
+| --- | --- | --- |
+| Network ID | `voi:mainnet` | `voi:testnet` |
+| Native asset | VOI | VOI |
+| Native decimals | 6 | 6 |
+| Stablecoin | aUSDC (ARC-200) | aUSDC (ARC-200) |
+| Stablecoin asset ID | `302190` | (testnet equivalent) |
+| Stablecoin decimals | 6 | 6 |
+| Confirmation time | About 5 seconds | About 5 seconds |
+| Typical fee | 0.001 VOI | Free (testnet faucet) |
+| Indexer | VOI Indexer (Algorand-compatible) | VOI Indexer |
+
+## Memo binding
+
+Same as [Algorand](/chains/algorand). Hosted-checkout payments include `algovoi:{token}` in the note field. The verifier matches against the active link.
+
+## ARC-200 versus ASA
+
+VOI's stablecoin (aUSDC) is an ARC-200 token, not an ASA. ARC-200 is a smart-contract token standard, more like ERC-20 than ASA. The differences your customers will notice:
+
+- No opt-in needed. ARC-200 transfers don't require a separate opt-in transaction the way ASA transfers do.
+- Slightly higher fees per transfer (still well under a cent) because the transfer is a contract call.
+
+## WAD
+
+VOI also has WAD (asset ID `47138068`), an alternate stablecoin. It's accepted but not the default. USDC equivalent for VOI tenants is aUSDC.
+
+## Wallets
+
+VOI uses the same wallet ecosystem as Algorand:
+
+- [Pera Wallet](https://perawallet.app) (with VOI network selected)
+- [Defly](https://defly.app)
+- [Kibisis](https://kibis.is)
+
+## See also
+
+- [Algorand](/chains/algorand) for the parent chain
+- [Concept: chains overview](/concepts/chains-overview) for cross-chain comparison

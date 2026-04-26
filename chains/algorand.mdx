@@ -1,0 +1,49 @@
+---
+title: Algorand
+description: USDC ASA on Algorand mainnet and testnet. Memo-bound checkouts, ~5 second confirmation, sub-cent fees.
+---
+
+## At a glance
+
+| | Mainnet | Testnet |
+| --- | --- | --- |
+| Network ID | `algorand:mainnet` | `algorand:testnet` |
+| Native asset | ALGO | ALGO |
+| Native decimals | 6 | 6 |
+| Stablecoin | USDC ASA | USDC ASA |
+| Stablecoin asset ID | `31566704` | `10458941` |
+| Stablecoin decimals | 6 | 6 |
+| Confirmation time | About 5 seconds | About 5 seconds |
+| Typical fee | 0.001 ALGO (~$0.0002) | Free (testnet faucet) |
+| Indexer | Algorand Indexer v2 | Algorand Indexer v2 |
+
+## Memo binding
+
+Algorand transactions can carry a 1KB note field. AlgoVoi uses this to bind on-chain payments to specific checkouts. Every hosted-checkout link generates a memo of the form `algovoi:{token}` (where `{token}` is the 32-character link token). Senders must include this memo for the transaction to count.
+
+The verifier reads the memo and matches against the active links table. Self-payments (payer address equals payout address) are blocked at this layer.
+
+## Payout addresses
+
+A payout address is just a regular Algorand wallet address (58-character base32). The address must have **opted in** to USDC ASA `31566704` (or `10458941` on testnet) before receiving USDC. Algorand requires opt-in for any non-native asset.
+
+If you set a payout address that hasn't opted in, payments will fail at the chain level. The dashboard validates opt-in when you save the address.
+
+## Wallets
+
+Most popular Algorand wallets work for both senders (your customers) and receivers (your payouts):
+
+- [Pera Wallet](https://perawallet.app)
+- [Defly](https://defly.app)
+- [Lute](https://lute.app)
+
+For programmatic settlement (running a server-side wallet that sweeps incoming payments), the [algosdk](https://github.com/algorand/js-algorand-sdk) and [py-algorand-sdk](https://github.com/algorand/py-algorand-sdk) cover the standard library surface.
+
+## Account abstraction
+
+Algorand supports rekeying: an address can hand control to a different signer without changing the address. AlgoVoi's facilitator does not require this, but it's available if you want to delegate signing for high-volume tenants.
+
+## See also
+
+- [VOI](/chains/voi) is a fork-and-go cousin with the same SDKs and a different fee model.
+- [Quickstart](/quickstart) uses Algorand testnet as the default first integration.

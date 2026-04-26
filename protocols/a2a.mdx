@@ -1,0 +1,86 @@
+---
+title: A2A (Agent2Agent Protocol)
+description: Google's open protocol for AI agents to discover and call each other. AlgoVoi is the only live multi-chain payment-gate A2A agent.
+---
+
+## What is A2A
+
+[Agent2Agent (A2A)](https://a2aproject.github.io/A2A) is Google's open protocol for AI agents from different vendors and frameworks to communicate. Each agent publishes an **Agent Card** at `/.well-known/agent.json` describing its capabilities, endpoints, and auth requirements. Clients discover the card, send a `Task`, and receive `Artifacts` back.
+
+AlgoVoi runs a live A2A v1.0 agent at [`api1.ilovechicken.co.uk/.well-known/agent.json`](https://api1.ilovechicken.co.uk/.well-known/agent.json) with three skills.
+
+## When to use A2A
+
+<CardGroup cols={2}>
+  <Card title="Cross-framework agents">
+    Your LangGraph agent calling someone's CrewAI agent, with no SDK lock-in.
+  </Card>
+  <Card title="Discoverable services">
+    AI agents finding payment-gate services via Agent Card registries.
+  </Card>
+  <Card title="x402 over A2A">
+    Wrap an x402-paywalled endpoint in an A2A task. Agents pay through the same protocol they discover with.
+  </Card>
+  <Card title="Long-running tasks">
+    A2A handles streaming and push notifications natively, which fits multi-step agent workflows.
+  </Card>
+</CardGroup>
+
+## AlgoVoi's A2A skills
+
+The live agent card publishes three skills you can call from any A2A-compatible client.
+
+### `verify-payment`
+
+Verify any on-chain transaction across the 7 supported chains. Input: `tx_id`, `chain`. Output: verification status plus the extracted amount, asset, and sender.
+
+### `create-checkout`
+
+Request a hosted-checkout link without going through the dashboard. Input: `amount`, `currency`, `preferred_network`. Output: checkout URL and token.
+
+<Note>
+`create-checkout` takes a fiat amount and currency, not chain microunits. AlgoVoi's price oracle does the conversion. This is by design. Agents shouldn't have to know per-chain decimals.
+</Note>
+
+### `check-status`
+
+Poll a checkout link's status. Input: `token`. Output: `active`, `paid`, `expired`, or `cancelled`, plus `tx_id` when paid.
+
+## Quickstart
+
+### From an A2A client
+
+```typescript
+import { A2AClient } from "@a2a-protocol/sdk-js";
+
+const client = new A2AClient("https://api1.ilovechicken.co.uk");
+const card = await client.fetchAgentCard();
+
+const task = await client.sendTask({
+  message: {
+    parts: [{ kind: "text", text: "verify tx ABCD1234… on algorand:mainnet" }]
+  },
+  skill: "verify-payment"
+});
+
+console.log(task.status, task.artifacts);
+```
+
+### From an MCP-bridged agent
+
+A2A and MCP can co-exist. See the [A2A MCP bridge](https://github.com/GongRzhe/A2A-MCP-Server). AlgoVoi's skills can be exposed to Claude, Cursor, or any MCP-aware agent through the bridge.
+
+## First-mover position
+
+As of 2026-04-22, AlgoVoi is **the only live A2A agent in the crypto-payments ecosystem**. A probe of 22 candidate domains found zero other deployed payment-gate agents. The Agent Card is published for any AI agent or registry to discover.
+
+## Production gateway only
+
+A2A skills run on the `api1.ilovechicken.co.uk` gateway, not on the cloud edge. They need direct facilitator and database access. Cloud endpoints proxy normal payment traffic, not A2A skills.
+
+## See also
+
+- [AP2](/protocols/ap2) typically rides on A2A as its transport
+- [x402](/protocols/x402) is used as the payment leg inside A2A skills
+- The [A2A spec](https://a2aproject.github.io/A2A)
+- AlgoVoi's [agent card](https://api1.ilovechicken.co.uk/.well-known/agent.json) (live JSON)

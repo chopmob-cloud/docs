@@ -1,0 +1,49 @@
+---
+title: Integrations overview
+description: Drop-in adapters for e-commerce, chat bots, AI frameworks, accounting, and more. One-line install, then point at your tenant.
+---
+
+AlgoVoi ships open-source adapters for every common surface you might want to take payments from. Each adapter speaks the same gateway, so a tenant configured once can accept payments from a Shopify store, a Telegram bot, and an MCP-served LLM call all on the same API key.
+
+## Categories
+
+<CardGroup cols={2}>
+  <Card title="AI agent frameworks" icon="microchip-ai" href="/integrations/ai-frameworks">
+    LangChain, LangGraph, CrewAI, AutoGen, AG2, DSPy, LlamaIndex, Pydantic AI, Vercel AI SDK, Semantic Kernel, Hugging Face, A2A, Agno.
+  </Card>
+  <Card title="AI model APIs" icon="brain" href="/integrations/ai-models">
+    OpenAI, Claude, Gemini, Cohere, Mistral, Bedrock, xAI Grok.
+  </Card>
+  <Card title="E-commerce" icon="cart-shopping" href="/integrations/ecommerce">
+    Shopify, WooCommerce, BigCommerce, Magento 2, PrestaShop, Shopware, Wix, Squarespace, Ghost, plus 20+ marketplaces.
+  </Card>
+  <Card title="Chat bots" icon="comments" href="/integrations/chat-bots">
+    Discord, Telegram, X (Twitter), Viber, WhatsApp Business.
+  </Card>
+  <Card title="Accounting and invoicing" icon="file-invoice" href="/integrations/accounting">
+    Xero, QuickBooks, FreshBooks, MYOB, Sage, Wave, Zoho Books.
+  </Card>
+  <Card title="No-code platforms" icon="puzzle-piece" href="/integrations/no-code">
+    Pabbly Connect, Activepieces, GiveWP, Gravity Forms.
+  </Card>
+  <Card title="Native SDKs" icon="code" href="/integrations/native-sdks">
+    Zero-dependency libraries for Go, PHP, Python, and Rust.
+  </Card>
+  <Card title="MCP server" icon="plug" href="/integrations/mcp-server">
+    Expose AlgoVoi as MCP tools for Claude Desktop, Claude Code, Cursor, Windsurf, and any MCP client.
+  </Card>
+  <Card title="Open banking" icon="building-columns" href="/integrations/banking">
+    TrueLayer and Yapily for fiat-in via Faster Payments and SEPA Instant.
+  </Card>
+  <Card title="Outbound webhooks" icon="paper-plane" href="/integrations/outbound-webhooks">
+    Stripe-shaped events to your backend, plus Slack, Discord, Teams, and six more chat destinations.
+  </Card>
+</CardGroup>
+
+## Source
+
+All adapters live at [github.com/chopmob-cloud/AlgoVoi-Platform-Adapters](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters) under the Business Source Licence 1.1.
+
+## What's not listed?
+
+If your platform isn't covered, the [native SDKs](/integrations/native-sdks) and [REST API](/api-reference/introduction) get you a working integration in under an hour. Most adapters are 200 to 500 lines of code over the same shared client.

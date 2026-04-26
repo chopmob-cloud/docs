@@ -1,0 +1,54 @@
+---
+title: AI model APIs
+description: Wrap OpenAI, Claude, Gemini, Cohere, Mistral, Bedrock, or xAI Grok behind an x402, MPP, or AP2 paywall.
+---
+
+If you're reselling capacity from a foundation-model API and you want to charge per call in USDC, the model adapters are the shortest path. Each one wraps the official SDK and forwards the call only after payment is verified.
+
+## Available adapters
+
+| Provider | Wraps | Source |
+| --- | --- | --- |
+| **OpenAI** (and OpenAI-compatible) | The `openai` SDK | [openai](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ai-adapters/openai) |
+| **Anthropic Claude** | The `anthropic` SDK | [claude](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ai-adapters/claude) |
+| **Google Gemini** | `google-generativeai` | [gemini](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ai-adapters/gemini) |
+| **Cohere** | The `cohere` `ClientV2` | [cohere](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ai-adapters/cohere) |
+| **Mistral** | `mistralai` | [mistral](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ai-adapters/mistral) |
+| **Amazon Bedrock** | The Bedrock Converse API | [bedrock](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ai-adapters/bedrock) |
+| **xAI Grok** | The `xai-sdk` | [xai](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ai-adapters/xai) |
+
+All seven adapters share the same API surface. If you switch from OpenAI to Claude you change one import, not your billing.
+
+## Common shape
+
+```python
+from algovoi_openai import AlgoVoiOpenAI  # or AlgoVoiClaude, AlgoVoiGemini, etc.
+
+adapter = AlgoVoiOpenAI(
+    api_base="https://api1.ilovechicken.co.uk",
+    api_key="algv_…",
+    tenant_id="…",
+    webhook_secret="algvw_…",
+    upstream_api_key="sk-…",  # the OpenAI / Anthropic / etc. key
+)
+
+# Same interface as the upstream SDK, plus a payment check
+response = await adapter.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "..."}],
+    resource_id="gpt-4o-call",  # which AlgoVoi resource to charge against
+)
+```
+
+If `resource_id` doesn't have a paid `Payment Credential` available on the request, the call returns an HTTP 402 with the challenge JSON. The client pays, retries, and the call forwards to OpenAI.
+
+## When to use these vs the framework adapters
+
+- Use **model adapters** when you're calling the foundation-model SDK directly and want a paywall in front of it.
+- Use **framework adapters** when you're building agents or chains in LangChain, LangGraph, CrewAI, etc. The framework wraps the model call and the framework adapter wraps the framework.
+
+## See also
+
+- [AI agent frameworks](/integrations/ai-frameworks) for LangChain, LangGraph, and friends
+- [MCP server](/integrations/mcp-server) to expose AlgoVoi to Claude Desktop and any other MCP client
+- [x402](/protocols/x402) and [MPP](/protocols/mpp) for the underlying protocols

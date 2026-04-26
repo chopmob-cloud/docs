@@ -1,0 +1,73 @@
+---
+title: Rate limits
+description: Per-tenant and per-IP limits, the headers AlgoVoi returns, and how to back off.
+---
+
+## Defaults
+
+Per-tenant: **300 requests per minute** with a burst window of **60 requests**.
+
+Per-IP (for unauthenticated public endpoints like checkout pages): **120 requests per minute** per IP, with a burst of 30.
+
+Per-checkout polling (when a customer is on the checkout page): **60 requests per minute** per checkout token. This protects the indexer-polling path that auto-detects on-chain payments.
+
+If you genuinely need a higher tenant limit, [contact us](/support). We've raised the cap for high-volume tenants on request without negotiation overhead.
+
+## Response headers
+
+Every response includes:
+
+```http
+X-RateLimit-Limit: 300
+X-RateLimit-Remaining: 287
+X-RateLimit-Reset: 1777200060
+```
+
+- `X-RateLimit-Limit`: total requests allowed in the current window.
+- `X-RateLimit-Remaining`: requests still available before the window resets.
+- `X-RateLimit-Reset`: unix timestamp when the window resets.
+
+## When you get rate-limited
+
+```http
+HTTP/1.1 429 Too Many Requests
+Retry-After: 30
+Content-Type: application/json
+
+{
+  "error": "rate_limited",
+  "message": "Tenant rate limit exceeded. Retry after the time indicated.",
+  "request_id": "req_…"
+}
+```
+
+The `Retry-After` header is in seconds. Wait at least that long before retrying.
+
+## Back-off strategy
+
+If you're regularly hitting limits, the simplest fix is exponential back-off with jitter:
+
+```python
+import random, time
+
+def with_backoff(func, *, max_retries=5):
+    for attempt in range(max_retries):
+        resp = func()
+        if resp.status_code != 429:
+            return resp
+        retry_after = int(resp.headers.get("Retry-After", "30"))
+        sleep = retry_after + random.uniform(0, retry_after * 0.5)
+        time.sleep(sleep)
+    raise RuntimeError("rate-limited too many times")
+```
+
+The 0.5× jitter spreads retries from concurrent processes so you don't all wake up at the same instant.
+
+## Why per-IP limits exist
+
+Public endpoints (the checkout page itself, the public chain-status pages) are unauthenticated. Without a per-IP limit, an abusive client could DoS the indexer. The per-IP limit kicks in before any per-tenant accounting, so an authenticated tenant request from the same IP isn't double-counted.
+
+## See also
+
+- [Errors](/api-reference/errors) for the full error envelope
+- [Authentication](/api-reference/authentication) for which endpoints are tenant-scoped

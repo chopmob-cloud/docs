@@ -1,0 +1,113 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "AlgoVoi",
+  "logo": {
+    "dark": "/images/logo-dark.svg",
+    "light": "/images/logo-light.svg"
+  },
+  "favicon": "/images/favicon.png",
+  "colors": {
+    "primary": "#00C8FF",
+    "light": "#67E8F9",
+    "dark": "#0891B2",
+    "anchors": {
+      "from": "#00C8FF",
+      "to": "#8B5CF6"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "Dashboard",
+      "url": "https://dash.algovoi.co.uk"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Sign up",
+    "url": "https://dash.algovoi.co.uk/signup"
+  },
+  "anchors": [
+    {
+      "name": "API reference",
+      "icon": "code",
+      "url": "api-reference"
+    },
+    {
+      "name": "GitHub",
+      "icon": "github",
+      "url": "https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Get started",
+      "pages": [
+        "introduction",
+        "quickstart",
+        "trial-and-pricing"
+      ]
+    },
+    {
+      "group": "Concepts",
+      "pages": [
+        "concepts/architecture",
+        "concepts/chains-overview",
+        "concepts/kyc-and-mainnet",
+        "concepts/payment-links",
+        "concepts/notifications"
+      ]
+    },
+    {
+      "group": "Payment protocols",
+      "pages": [
+        "protocols/x402",
+        "protocols/mpp",
+        "protocols/ap2",
+        "protocols/a2a",
+        "protocols/solana-actions"
+      ]
+    },
+    {
+      "group": "Chains",
+      "pages": [
+        "chains/algorand",
+        "chains/voi",
+        "chains/hedera",
+        "chains/stellar",
+        "chains/base",
+        "chains/solana",
+        "chains/tempo"
+      ]
+    },
+    {
+      "group": "Integrations",
+      "pages": [
+        "integrations/overview",
+        "integrations/chat-bots",
+        "integrations/ecommerce",
+        "integrations/ai-frameworks",
+        "integrations/outbound-webhooks"
+      ]
+    },
+    {
+      "group": "API reference",
+      "pages": [
+        "api-reference/introduction",
+        "api-reference/authentication",
+        "api-reference/errors",
+        "api-reference/rate-limits"
+      ]
+    },
+    {
+      "group": "Help",
+      "pages": [
+        "support",
+        "incident-protocol",
+        "changelog"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "x": "https://x.com/algovoi",
+    "github": "https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters"
+  }
+}

@@ -1,0 +1,87 @@
+---
+title: Payment links
+description: Hosted-checkout links. What they are, how to create them, and when to use them over x402.
+---
+
+A payment link is a short-lived URL that points at AlgoVoi's hosted-checkout page. Send the URL to a customer (in an invoice, a chat message, an email) and they pay through the standard wallet flow on the page.
+
+## When to use a payment link
+
+- **Email invoicing**: a Xero or QuickBooks invoice with a "pay in USDC" URL
+- **Chat-bot replies**: a Telegram or Discord bot that replies to `pay £5` with a URL
+- **Phone-to-phone**: shopkeeper generates the URL, customer scans the QR
+- **Anywhere x402 is too low-level**: you want a hosted checkout page with QR rendering, not a 402 response that the customer's tooling has to handle
+
+For agent payments, [x402](/protocols/x402) and [MPP](/protocols/mpp) are the right shape. Payment links are for human consumers.
+
+## Lifecycle
+
+```
+created (active)  →  paid       (customer paid)
+                  →  expired    (TTL elapsed without payment)
+                  →  cancelled  (operator cancelled before payment)
+```
+
+Once paid, the link is locked. No further state transitions. The `payment_ledger_id` column points at the on-chain transaction record.
+
+## Creating a link
+
+```bash
+curl -X POST https://api1.ilovechicken.co.uk/v1/payment-links \
+  -H "Authorization: Bearer $ALGOVOI_API_KEY" \
+  -H "X-Tenant-Id: $TENANT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 5.00,
+    "currency": "USD",
+    "label": "Order #1234",
+    "preferred_network": "solana_mainnet",
+    "redirect_url": "https://your-site.example/thanks",
+    "expires_in_seconds": 1800
+  }'
+```
+
+Response:
+
+```json
+{
+  "checkout_url": "https://api1.ilovechicken.co.uk/checkout/abc123",
+  "token": "abc123",
+  "chain": "solana-mainnet",
+  "amount_microunits": 5000000,
+  "expires_at": "2026-04-26T18:00:00Z",
+  "cancel_secret": "csK_abc…"
+}
+```
+
+The `cancel_secret` is the only way to cancel the link before payment. Hold it server-side.
+
+## TTL and expiry
+
+Default expiry is **30 minutes** from creation. Maximum is **7 days**. After expiry the link's status flips to `expired` and the page returns "this checkout has expired".
+
+## Cancellation
+
+```bash
+curl -X POST https://api1.ilovechicken.co.uk/checkout/{token}/cancel \
+  -d '{"cancel_secret": "csK_abc…"}'
+```
+
+Once paid, cancellation is rejected.
+
+## Bot integration metadata
+
+When a payment link is created by a chat bot, the link record carries metadata that lets the bot reply to the right conversation when the payment confirms:
+
+- `tweet_id` for X / Twitter bot payments
+- `confirmation_tweet_id` once the bot has posted the "payment confirmed" reply
+- `telegram_chat_id` for Telegram bot payments
+- `telegram_confirmed` boolean, flipped to true once the reply has been sent
+
+These are written by the bot adapters and consumed by the same adapter's reply path.
+
+## See also
+
+- [Quickstart](/quickstart) walks through creating your first link
+- [Outbound webhooks](/integrations/outbound-webhooks) for the event your backend receives on payment confirmation
+- [x402](/protocols/x402) for the agent-equivalent flow

@@ -1,0 +1,136 @@
+---
+title: x402 (HTTP 402 Payment Required)
+description: Charge per request for any HTTP endpoint. AlgoVoi is a multi-chain x402 facilitator across 7 chains.
+---
+
+## What is x402
+
+[x402](https://github.com/coinbase/x402) is Coinbase's open spec for paywalling HTTP endpoints. The flow is:
+
+1. Client calls a protected endpoint without payment.
+2. Server returns `HTTP 402 Payment Required` with a `payment_requirements` JSON body listing accepted networks, assets, amounts, and a receiving address.
+3. Client pays on-chain and includes the resulting `tx_id` in an `X-Payment` header.
+4. Server verifies the payment via a **facilitator** (AlgoVoi) and serves the resource.
+
+AlgoVoi is the only x402 facilitator that supports all of Algorand, VOI, Hedera, Stellar, Base, Solana, and Tempo.
+
+## When to use x402
+
+<CardGroup cols={2}>
+  <Card title="Per-request API monetisation">
+    Charge $0.001 per LLM call, $0.05 per image generation, $0.10 per data lookup.
+  </Card>
+  <Card title="Agent-to-agent commerce">
+    AI agents discovering and paying for other agents' capabilities autonomously.
+  </Card>
+  <Card title="Pay-per-view content">
+    Articles, video, or downloads, all gated by a single chain transaction.
+  </Card>
+  <Card title="Microservice metering">
+    Internal services charging each other for compute or storage with cryptographic proof.
+  </Card>
+</CardGroup>
+
+## Quickstart
+
+### 1. Define a protected resource
+
+In the dashboard go to **Resources → New** and define what you want to monetise:
+
+- `resource_id`: a string you'll use in the URL path, for example `premium-data`
+- `price_microalgos`: amount in chain microunits (USDC has 6 decimals on most chains, so $1.00 is 1,000,000)
+- `payment_network`: the chain you want to settle on
+- `asset_id`: the stablecoin contract, ASA, or SPL mint, or `0` for native
+
+### 2. Gate your endpoint
+
+Point your server's protected endpoint at the AlgoVoi gateway:
+
+```http
+GET /v1/protected/premium-data
+Host: api1.ilovechicken.co.uk
+Authorization: Bearer <YOUR_API_KEY>
+X-Tenant-Id: <YOUR_TENANT_ID>
+```
+
+Without payment, AlgoVoi returns:
+
+```http
+HTTP/1.1 402 Payment Required
+Content-Type: application/json
+
+{
+  "x402Version": 1,
+  "accepts": [
+    {
+      "scheme": "exact",
+      "network": "algorand:mainnet",
+      "maxAmountRequired": "1000000",
+      "resource": "premium-data",
+      "description": "Premium data lookup",
+      "mimeType": "application/json",
+      "payTo": "GHSRL2SAY247...MWI",
+      "maxTimeoutSeconds": 300,
+      "asset": "31566704",
+      "extra": { "name": "USDC", "decimals": 6 }
+    }
+  ]
+}
+```
+
+### 3. Pay and retry with `X-Payment`
+
+The client pays on-chain, then retries with the `tx_id`:
+
+```http
+GET /v1/protected/premium-data
+X-Payment: <base64-encoded-payment-payload>
+```
+
+AlgoVoi verifies the chain transaction, marks it consumed (no double-spend), and forwards the request to your origin server.
+
+## Multi-chain mode
+
+A single resource can accept payment on multiple chains. The 402 response advertises every chain you've configured a payout for, and the client picks one:
+
+```json
+{
+  "x402Version": 1,
+  "accepts": [
+    { "network": "base:mainnet",  "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "maxAmountRequired": "1000000", ... },
+    { "network": "solana:mainnet", "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "maxAmountRequired": "1000000", ... },
+    { "network": "algorand:mainnet", "asset": "31566704", "maxAmountRequired": "1000000", ... }
+  ]
+}
+```
+
+This is the recommended setup. It lets agents and humans pay from whatever wallet they already have funded.
+
+## Solana Pay reference binding
+
+Solana doesn't support memos in the same way as Algorand, VOI, or Hedera, so x402 over Solana uses the [Solana Pay `reference` pubkey](/protocols/solana-actions) mechanism. AlgoVoi generates a fresh ed25519 reference pubkey per checkout, includes it in the Solana Pay URL, and verifies the settling transaction by looking up `getSignaturesForAddress(reference)`.
+
+You don't have to think about this. It's automatic when `network = solana:*`.
+
+## Verifying webhooks
+
+When a payment confirms, AlgoVoi fires a `payment.confirmed` event to your configured generic webhook. See [Outbound webhooks](/integrations/outbound-webhooks) for the payload schema and HMAC verification.
+
+## Chain support matrix
+
+| Chain | Native | Stablecoin | CAIP-2 |
+| --- | --- | --- | --- |
+| Algorand mainnet | ALGO | USDC ASA | `algorand:mainnet` |
+| VOI mainnet | VOI | aUSDC ARC-200 | `voi:mainnet` |
+| Hedera mainnet | HBAR | USDC HTS | `hedera:mainnet` |
+| Stellar mainnet | XLM | USDC issuer | `stellar:mainnet` |
+| Base mainnet | ETH | USDC ERC-20 | `eip155:8453` |
+| Solana mainnet | SOL | USDC SPL | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` |
+| Tempo mainnet | ETH | USDCe TIP-20 | `tempo:mainnet` |
+
+## See also
+
+- [MPP](/protocols/mpp) for paywalling MCP tools
+- [AP2](/protocols/ap2) for Google's mandate-based agent commerce
+- [A2A](/protocols/a2a) for x402 over the Agent-to-Agent transport
+- [Solana Actions](/protocols/solana-actions) for Blink and dial.to integration

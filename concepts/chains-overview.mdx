@@ -1,0 +1,72 @@
+---
+title: Chains overview
+description: All 7 supported chains, their stablecoins, RPC providers, and per-chain quirks at a glance.
+---
+
+AlgoVoi supports seven chains today. They split into three families based on how transactions are bound to specific checkouts.
+
+## The seven
+
+| Chain | Family | Native | Stablecoin | Confirmation | Fee |
+| --- | --- | --- | --- | --- | --- |
+| [Algorand](/chains/algorand) | Memo | ALGO | USDC ASA | ~5s | sub-cent |
+| [VOI](/chains/voi) | Memo | VOI | aUSDC ARC-200 | ~5s | sub-cent |
+| [Hedera](/chains/hedera) | Memo | HBAR | USDC HTS | ~5s | $0.0001 |
+| [Stellar](/chains/stellar) | Short memo | XLM | USDC issuer | ~5s | sub-cent |
+| [Base](/chains/base) | Amount-only | ETH | USDC ERC-20 | ~2s | $0.001 to $0.05 |
+| [Solana](/chains/solana) | Reference pubkey | SOL | USDC SPL | <1s | $0.00025 |
+| [Tempo](/chains/tempo) | Amount-only | ETH | USDCe TIP-20 | ~2s | sub-cent |
+
+## Binding mechanisms
+
+How AlgoVoi knows that a specific on-chain transaction satisfies a specific checkout:
+
+### Memo binding (Algorand, VOI, Hedera)
+
+Transactions carry a note or memo field. AlgoVoi puts `algovoi:{token}` in the memo. The verifier matches by memo content.
+
+### Short text memo (Stellar)
+
+Same as memo binding, but Stellar caps `MEMO_TEXT` at 28 bytes. AlgoVoi uses a shortened `av:{token[:20]}` form.
+
+### Reference pubkey (Solana)
+
+Solana doesn't have arbitrary memos, so AlgoVoi uses [Solana Pay's reference mechanism](/protocols/solana-actions). A fresh ed25519 pubkey is generated per checkout and included as a non-signer account in the transaction. The verifier looks up the settling tx via `getSignaturesForAddress(reference)`.
+
+### Amount-only (Base, Tempo)
+
+EVM ERC-20 / TIP-20 transfers don't carry memos. AlgoVoi binds checkouts by amount uniqueness: each checkout's amount is slightly randomised so two open checkouts for the same target amount can be distinguished.
+
+## Stablecoin notes
+
+| Chain | Stablecoin | On-chain identifier |
+| --- | --- | --- |
+| Algorand mainnet | USDC | ASA `31566704` |
+| VOI mainnet | aUSDC | ARC-200 `302190` |
+| Hedera mainnet | USDC | HTS `0.0.456858` |
+| Stellar mainnet | USDC | `USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN` |
+| Base mainnet | USDC | ERC-20 `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+| Solana mainnet | USDC | SPL mint `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` |
+| Tempo mainnet | USDCe | TIP-20 `0x20c000000000000000000000b9537d11c60e8b50` |
+
+USDC has 6 decimals on every chain except Stellar, where it's 7 decimals.
+
+## Native asset support
+
+Every chain also supports native-asset payments (ALGO, VOI, HBAR, XLM, ETH, SOL). Native payments are less common because the price is volatile, but they're useful for chain-only environments where stablecoin issuance hasn't arrived yet.
+
+## Picking a chain
+
+If you're starting from zero:
+
+- **Cheapest fees**: Solana (~$0.00025) or Algorand (~$0.0002)
+- **Fastest confirmation**: Solana (sub-second) or Base (~2s)
+- **Most existing wallets**: Base (any EVM wallet) or Solana (Phantom et al)
+- **If your customers already have tokens on a specific chain**: just enable that chain
+
+For a multi-chain offer, configure two or three payouts and let the customer choose at checkout.
+
+## See also
+
+- Per-chain detail pages, one per chain in the navigation under **Chains**
+- [x402 protocol](/protocols/x402) for the multi-chain quote shape

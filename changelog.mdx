@@ -1,0 +1,43 @@
+---
+title: Changelog
+description: What shipped and when. Major releases, breaking changes, new chain support.
+---
+
+## 2026-04-25
+
+- **$1,000 KYC-unlock free mainnet trial** replaces the prior rate-cap trial. Pass KYC and you get $1,000 of free mainnet payments across all 7 chains, then 0.50% per payment.
+- **9 outbound notification destinations** live: Slack, Discord, Microsoft Teams, Mattermost, Rocket.Chat, Google Chat, Zulip, Telegram, generic webhook. All share the same retry stack and audit log.
+- **Hosted-checkout `payment.confirmed` webhooks** now fire alongside the existing x402 and MPP paths, with `payment_link_token` and `payment_link_label` in the event payload.
+- **Self-payment block** at the verifier across all 7 chains.
+
+## 2026-04-24
+
+- **Solana Actions and Blinks** endpoint live at `api1.ilovechicken.co.uk/actions/checkout/{token}`, returning unsigned VersionedTransactions with SPL USDC transfer plus Solana Pay reference binding.
+- **All 4 conversational bots live**: X, Telegram, Discord, Viber. Multi-tenant, with per-tenant chain preferences.
+- **Solana Pay reference binding** for hosted checkouts. Replaces memo binding on Solana with cryptographic reference-pubkey binding.
+
+## 2026-04-22
+
+- **Base chain added** as the fifth supported chain. USDC ERC-20 settlement.
+- **AP2 v0.1 reference scenarios** shipped upstream: human-present crypto-algo and crypto-solana scenarios.
+- **A2A v1.0 agent live** at `api1.ilovechicken.co.uk/.well-known/agent.json` with three skills (verify-payment, create-checkout, check-status).
+
+## 2026-04-20
+
+- **Pabbly Connect app** approved and listed in the Pabbly app store.
+- **Cloud edge** live for off-gateway status sync and chat-bot webhooks.
+
+## 2026-04-15
+
+- **Stellar chain added** as the fourth supported chain. USDC issuer + XLM native, with 28-byte memo binding.
+- **MultiFernet rotation** for tenant-secret encryption.
+
+## Earlier
+
+- **Hedera chain added**, USDC HTS via Mirror Node verification.
+- **VOI chain added**, ARC-200 aUSDC.
+- **Algorand chain** as the original launch chain.
+
+## Subscribing
+
+When the status page goes live at `status.algovoi.co.uk`, subscribers will receive changelog and incident emails automatically. For now, watch this page or subscribe to the GitHub releases at [chopmob-cloud/AlgoVoi-Platform-Adapters](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/releases).

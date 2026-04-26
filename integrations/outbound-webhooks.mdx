@@ -1,0 +1,138 @@
+---
+title: Outbound webhooks
+description: Stripe-shaped events delivered to your endpoint with HMAC-SHA256 signing, exponential-backoff retry, and a per-tenant audit log.
+---
+
+## What you get
+
+When a payment confirms, AlgoVoi delivers a `payment.confirmed` event to one or more destinations you configure in **Settings → Notifications**:
+
+- **9 destinations**: Slack, Discord, Microsoft Teams, Mattermost, Rocket.Chat, Google Chat, Zulip, Telegram, generic webhook (your own backend).
+- **Stripe-shaped event JSON** for the generic webhook. Chat destinations get human-readable cards instead.
+- **HMAC-SHA256 signing** in Stripe-compatible header format.
+- **Auto-retry up to 32 hours** with exponential backoff.
+- **Audit log** at `dash.algovoi.co.uk/notifications` showing every delivery attempt with status, attempt count, last HTTP code, last error, and a payload preview.
+- **Manual retry** button for failed deliveries.
+
+## Generic webhook event schema
+
+```json
+{
+  "id": "evt_a3f7c192-d8e1-4b6c-9f0a-7b1e2c4d8e3f",
+  "type": "payment.confirmed",
+  "created": 1777200000,
+  "api_version": "1",
+  "data": {
+    "tenant_label": "Acme Payments Ltd",
+    "resource_id": "premium-content",
+    "chain": "algorand:mainnet",
+    "asset": { "id": "31566704", "label": "USDC", "decimals": 6 },
+    "amount_microunits": "5000000",
+    "amount_pretty": "5 USDC",
+    "tx_id": "ABCD1234EFGH5678ABCD1234EFGH5678ABCD1234EFGH5678ABCD",
+    "payer_address": "GHSRL2SAY247…MWI",
+    "payment_link_token": "abc123",
+    "payment_link_label": "Order #1234"
+  }
+}
+```
+
+### Field notes
+
+| Field | Notes |
+| --- | --- |
+| `id` | Globally unique. **Dedupe on this.** Same event may be redelivered if your endpoint times out. |
+| `created` | Unix timestamp of delivery, not chain-confirmation timestamp. |
+| `api_version` | Bumped if we ever break the schema. Currently `"1"`. |
+| `chain` | [CAIP-2](https://chainagnostic.org/CAIPs/caip-2) network ID. EVM chains are `eip155:8453`, Solana is the genesis-block hash, others are `<chain>:<network>`. |
+| `asset.id` | The on-chain identifier: ASA ID, HTS token ID, ERC-20 contract, SPL mint, or the Stellar `USDC:<issuer>` form. |
+| `amount_microunits` | Sent as a **string**, not a number, to avoid JS Number precision loss for high-decimal native tokens. Parse with BigInt if you do arithmetic. |
+| `payment_link_token` | Present only for hosted-checkout payments. |
+| `payment_link_label` | Free-text label the merchant set when creating the link. Adapters parse this for routing (for example, the Ghost adapter extracts `Ghost: <reader_email>`). |
+
+## HMAC verification
+
+Header: `X-AlgoVoi-Signature: t=<unix_ts>,v1=<hex>`
+
+Verify by:
+
+1. Parsing `t` and `v1` from the header.
+2. Rejecting if `abs(now - t) > 300`. Five-minute tolerance, replay window.
+3. Computing `hmac_sha256(secret, f"{t}.{raw_body}")`.
+4. Comparing in constant time with `v1`.
+
+### Python example
+
+```python
+import hmac, hashlib, time, json
+
+def verify(secret: str, raw_body: bytes, header: str) -> dict | None:
+    parts = dict(p.split("=", 1) for p in header.split(",") if "=" in p)
+    ts = int(parts.get("t", 0))
+    if abs(int(time.time()) - ts) > 300:
+        return None
+    expected = hmac.new(secret.encode(),
+                        f"{ts}.".encode() + raw_body,
+                        hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, parts.get("v1", "")):
+        return None
+    return json.loads(raw_body)
+```
+
+### Node example
+
+```javascript
+import crypto from "crypto";
+
+function verify(secret, rawBody, header) {
+  const parts = Object.fromEntries(header.split(",").map(p => p.split("=")));
+  const ts = parseInt(parts.t || "0", 10);
+  if (Math.abs(Date.now()/1000 - ts) > 300) return null;
+  const expected = crypto.createHmac("sha256", secret)
+    .update(`${ts}.`).update(rawBody).digest("hex");
+  if (!crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(parts.v1 || ""))) return null;
+  return JSON.parse(rawBody);
+}
+```
+
+## Retry schedule
+
+If your endpoint returns non-2xx or times out (5 second timeout per attempt), AlgoVoi schedules a retry:
+
+| Attempt | Backoff |
+| --- | --- |
+| 1st failure | +30s |
+| 2nd failure | +2 min |
+| 3rd failure | +10 min |
+| 4th failure | +1 h |
+| 5th failure | +6 h |
+| 6th failure | dead-letter |
+
+Six attempts over about 32 hours. After the sixth, the delivery is marked `failed`. You can manually retry from the dashboard audit log even after dead-letter.
+
+## Idempotency contract
+
+**Receivers must dedupe on `id`.** AlgoVoi guarantees at-least-once delivery, not exactly-once. The same event may arrive twice if:
+
+- Your endpoint returned 2xx but we didn't receive the response in time
+- A worker process restarted mid-delivery
+- A maintenance retry fired against a delivery that had already succeeded
+
+Persistent dedupe (Redis SET, DB unique index on `id`) is your responsibility.
+
+## Status codes
+
+AlgoVoi treats responses by status family:
+
+| Status | Outcome |
+| --- | --- |
+| 2xx | Success. Delivery marked `delivered`. |
+| 4xx | Failure. Counts as a retry attempt (your endpoint shouldn't 4xx legitimate events). |
+| 5xx, timeout, network error | Failure. Retry with backoff. |
+
+For events you intentionally don't handle (future event types), return **200** with a body indicating you ignored it. 4xx will trigger retry storms.
+
+## See also
+
+- [Notifications concept page](/concepts/notifications) for the broader picture (9 destinations, audit log)
+- [Quickstart](/quickstart) to set up your first webhook

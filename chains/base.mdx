@@ -1,0 +1,41 @@
+---
+title: Base
+description: USDC ERC-20 on Base mainnet and Base Sepolia. EVM-native settlement with amount-only binding.
+---
+
+## At a glance
+
+| | Mainnet | Sepolia (testnet) |
+| --- | --- | --- |
+| Network ID | `eip155:8453` | `eip155:84532` |
+| Native asset | ETH | ETH |
+| Native decimals | 18 | 18 |
+| Stablecoin | USDC ERC-20 | USDC ERC-20 |
+| Stablecoin contract | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
+| Stablecoin decimals | 6 | 6 |
+| Confirmation time | About 2 seconds | About 2 seconds |
+| Typical fee | $0.001 to $0.05 | Free (Sepolia faucet) |
+
+## Amount-only binding
+
+Base is EVM, and EVM ERC-20 transfers don't carry a memo. AlgoVoi binds Base checkouts to specific links by **amount uniqueness**. Each checkout generates a slightly randomised amount (within 0.000001 USDC of the target) so two open checkouts for the same amount can be distinguished by their actual on-chain transfer values.
+
+This means:
+- A Base checkout's amount in the JSON response is what your customer must send exactly.
+- Don't strip cents or round.
+- The link's `amount_microunits` is authoritative.
+
+## Payout addresses
+
+Standard Ethereum-format addresses (40 hex chars, optional `0x` prefix). EIP-55 mixed-case checksumming is supported but not required. Base uses the same addresses as Ethereum mainnet, so an address you control on mainnet works on Base out of the box (different state, same identity).
+
+## Wallets
+
+- [Coinbase Wallet](https://wallet.coinbase.com)
+- [Rainbow](https://rainbow.me)
+- [MetaMask](https://metamask.io) (with Base added as a custom network)
+
+## See also
+
+- [Tempo](/chains/tempo) for the other EVM-style chain we support
+- [x402 protocol](/protocols/x402) for the payment protocol layer

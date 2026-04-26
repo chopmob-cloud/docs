@@ -1,0 +1,44 @@
+---
+title: Open banking
+description: Accept Faster Payments and SEPA Instant via TrueLayer or Yapily, settled as USDC on-chain.
+---
+
+The open-banking adapters give your buyers a fiat-pay option (Faster Payments in the UK, SEPA Instant in the EU) while you still settle in stablecoin. The adapter handles the bank transfer through TrueLayer or Yapily, then automatically buys USDC and sends it to your AlgoVoi payout address.
+
+## Available adapters
+
+| Provider | Coverage | Source |
+| --- | --- | --- |
+| **TrueLayer** | UK Faster Payments, SEPA Instant | [truelayer](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/truelayer) |
+| **Yapily** | 2,000+ banks across 46+ countries | [yapily](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/yapily) |
+
+## When you'd want this
+
+- Your buyers don't have crypto wallets but you want to settle in USDC
+- You're targeting a region where bank transfer is the dominant payment method
+- You want a regulated fiat-in path while keeping the on-chain audit trail
+
+## How it works
+
+```mermaid
+flowchart LR
+  Buyer -->|bank transfer| TrueLayer[TrueLayer / Yapily]
+  TrueLayer -->|fiat received| Adapter[AlgoVoi adapter]
+  Adapter -->|buys USDC| Onramp[On-ramp partner]
+  Onramp -->|USDC| AlgoVoi[AlgoVoi gateway]
+  AlgoVoi -->|confirmed event| Tenant[Your app]
+```
+
+The adapter sits between the open-banking provider and AlgoVoi. From your app's perspective the integration is identical to any other AlgoVoi payment, you receive the same `payment.confirmed` event and the same on-chain reference.
+
+## Trade-offs versus direct crypto
+
+- **Pro**: buyers without wallets can pay you.
+- **Pro**: regulated rails, with fraud protections that come from the bank side.
+- **Con**: there's an on-ramp step, so your effective fee is higher than 0.50%. You bear the on-ramp's spread.
+- **Con**: settlement is faster than card but slower than direct crypto. Faster Payments is near-instant, but the on-ramp leg adds ~1 minute.
+
+## See also
+
+- [Trial and pricing](/trial-and-pricing) for the AlgoVoi side of the costs (the on-ramp spread is separate)
+- [Outbound webhooks](/integrations/outbound-webhooks) for the confirmation event your backend receives

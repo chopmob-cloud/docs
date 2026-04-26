@@ -1,0 +1,69 @@
+---
+title: Chat bots
+description: Take USDC payments inside Discord, Telegram, X, Viber, and WhatsApp. Typing 'pay £5' is enough.
+---
+
+AlgoVoi runs four conversational bots in production today. Each is multi-tenant, so a single bot account serves every tenant who's wired their config in. Tenants don't have to host anything.
+
+## Live bots
+
+| Channel | Status | Trigger | Hosting |
+| --- | --- | --- | --- |
+| **X (Twitter)** | Live | Tweet `pay £5` (or `@bot pay 5 USDC`) | AlgoVoi-managed (polling) |
+| **Telegram** | Live | `/pay 5 USDC` or `pay £5` | AlgoVoi-managed (webhook) |
+| **Discord** | Live | Slash command or message in any wired channel | AlgoVoi-managed (Gateway WebSocket, shared bot) |
+| **Viber** | Live | Direct message to the bot | AlgoVoi-managed (webhook) |
+| **WhatsApp Business** | Adapter ready | Reply to customer order message | Self-hosted via WhatsApp Business API |
+
+## How tenants wire a bot
+
+In the dashboard go to **Connect** and pick the channel you want. Each card walks you through the platform-specific bits:
+
+- **X**: post a tweet from your account that mentions the AlgoVoi handle. The bot watches mentions and replies with a hosted-checkout URL. Per-tenant chain preference, so a tenant can default to Solana while another defaults to Algorand.
+- **Telegram**: paste the BotFather token. AlgoVoi runs the webhook and routes by chat ID.
+- **Discord**: install AlgoVoi to your server using the OAuth invite link in the dashboard. The shared bot picks up your guild, routes by guild ID. Message Content Intent must stay on in the Developer Portal.
+- **Viber**: paste the Viber Public Account access token. Webhook is registered automatically.
+- **WhatsApp**: install the [whatsapp adapter](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/whatsapp) on your own infrastructure (WhatsApp Business API requires a self-managed phone number).
+
+## Conversational pattern
+
+Every bot speaks the same shape:
+
+```
+User:   pay £5 in solana
+Bot:    Here's your checkout link. Reply when paid.
+        https://api1.ilovechicken.co.uk/checkout/abc123
+        Amount: 5 USDC on Solana
+        Expires: 30 minutes
+User:   <pays the link>
+Bot:    Payment received. Tx: 4Aw…XbY (5 USDC). Thanks.
+```
+
+Chain keyword parsers map natural-language keywords to the right chain:
+
+- `algorand`, `algo`, `algorand_mainnet` → Algorand
+- `voi` → VOI
+- `hedera`, `hbar` → Hedera
+- `stellar`, `xlm` → Stellar
+- `base`, `eth` (when on Base context) → Base
+- `solana`, `sol` → Solana
+- `tempo` → Tempo
+
+If no chain is specified, the bot uses the tenant's configured `preferred_network`.
+
+## Auto-replies on payment confirmation
+
+When a payment confirms, the bot posts a follow-up message in the same conversation. This uses the same outbound-notification pipeline as your webhook destinations, so the audit log at `dash.algovoi.co.uk/notifications` shows the bot reply alongside any Slack or generic-webhook deliveries.
+
+## Source
+
+- [discord adapter](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/discord) (slash commands, hosted checkout)
+- [telegram adapter](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/telegram) (sendMessage, hosted checkout)
+- [whatsapp adapter](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/whatsapp) (Business API replies, hosted checkout)
+- X bot: hosted by AlgoVoi, no third-party install needed.
+- Viber bot: hosted by AlgoVoi, no third-party install needed.
+
+## See also
+
+- [No-code platforms](/integrations/no-code) for X-specific automation via Pabbly
+- [Outbound webhooks](/integrations/outbound-webhooks) for routing the same payment events to Slack, Teams, or your own backend

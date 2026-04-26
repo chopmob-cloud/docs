@@ -1,0 +1,38 @@
+---
+title: Tempo
+description: USDCe TIP-20 on Tempo mainnet and Moderato (testnet). EVM-style chain with TIP-20 token semantics.
+---
+
+## At a glance
+
+| | Mainnet | Moderato (testnet) |
+| --- | --- | --- |
+| Network ID | `tempo:mainnet` | `tempo:moderato` |
+| Native asset | ETH | ETH |
+| Native decimals | 18 | 18 |
+| Stablecoin | USDCe (TIP-20) | USDCe (TIP-20) |
+| Stablecoin contract | `0x20c000000000000000000000b9537d11c60e8b50` | (Moderato equivalent) |
+| Stablecoin decimals | 6 | 6 |
+| Confirmation time | About 2 seconds | About 2 seconds |
+| Typical fee | Sub-cent | Free (testnet faucet) |
+
+## Amount-only binding
+
+Tempo is EVM-style, like Base. TIP-20 transfers don't carry a memo, so AlgoVoi uses amount uniqueness to bind checkouts to specific transfers. Same caveats as [Base](/chains/base): send the exact `amount_microunits` from the checkout response.
+
+## TIP-20 versus ERC-20
+
+TIP-20 is Tempo's token standard, semantically equivalent to ERC-20 for the operations AlgoVoi cares about (`transfer`, `transferFrom`, `balanceOf`). The contract above is the canonical USDC bridge token, marked USDCe to distinguish it from native USDC on Ethereum mainnet.
+
+## Wallets
+
+EVM-compatible wallets work, configured for the Tempo network:
+
+- [MetaMask](https://metamask.io)
+- [Rabby](https://rabby.io)
+- [WalletConnect](https://walletconnect.com)
+
+## See also
+
+- [Base](/chains/base) for the other EVM chain we support
+- [x402 protocol](/protocols/x402) for the payment protocol layer

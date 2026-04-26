@@ -1,0 +1,77 @@
+---
+title: E-commerce adapters
+description: Drop-in modules for storefronts and marketplaces. One-line install, then your customers can pay in USDC.
+---
+
+E-commerce adapters fall into two shapes:
+
+- **Storefront platforms** install as a payment plugin or module, so the buyer sees a "Pay with USDC" option at checkout.
+- **Marketplaces** create off-checkout settlement links because most marketplaces (Amazon, eBay, Walmart) won't let third parties into the buyer flow. The adapter generates an AlgoVoi link from the order webhook, and you share it with the buyer.
+
+## Storefront platforms
+
+| Platform | Notes | Source |
+| --- | --- | --- |
+| **Shopify** | App listing and Storefront API | [shopify](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters) |
+| **WooCommerce** | Hosted-checkout payment gateway plugin | [woocommerce](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/woocommerce) |
+| **BigCommerce** | Order-webhook-driven checkout link | [bigcommerce](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/bigcommerce) |
+| **Magento 2** | Two modules: hosted checkout and in-page wallet | [magento2](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/magento2) |
+| **PrestaShop** | Two modules: hosted checkout redirect and in-page wallet | [prestashop](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/prestashop) |
+| **Shopware 6** | Two plugins: hosted checkout and in-page wallet | [shopware](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/shopware) |
+| **Wix** | In-checkout USDC option (Algorand, VOI, Hedera, Stellar) | [wix](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/wix) |
+| **Squarespace** | USDC across Algorand, VOI, Hedera, Stellar | [squarespace](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/squarespace) |
+| **Ghost 5.x** | Crypto tip and membership-access for blogs. Calls the Ghost Admin API on payment to upgrade the reader's member record. | [ghost](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ghost) |
+| **OpenCart** | Hosted checkout payment module | [opencart](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/opencart) |
+| **Drupal Commerce** | Payment gateway plugin | [drupal-commerce](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/drupal-commerce) |
+| **Easy Digital Downloads** | WP digital-product gateway | [easy-digital-downloads](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/easy-digital-downloads) |
+| **Ecwid** | Storefront payment provider | [ecwid](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ecwid) |
+| **Instagram Shops** | Off-checkout settlement links | [instagram-shops](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/instagram-shops) |
+
+## Marketplaces
+
+These create off-checkout settlement links because the marketplace doesn't let third parties into the consumer payment flow.
+
+| Marketplace | Region | Source |
+| --- | --- | --- |
+| **Amazon** | Global, via Selling Partner API | [amazon-mws](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/amazon-mws) |
+| **eBay** | Global, via eBay Sell APIs | [ebay](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ebay) |
+| **Etsy** | Global | [etsy](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/etsy) |
+| **Walmart Marketplace** | US | [walmart](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/walmart) |
+| **TikTok Shop** | Global | [tiktok-shop](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/tiktok-shop) |
+| **Shopee** | Southeast Asia and Brazil | [shopee](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/shopee) |
+| **Lazada** | Southeast Asia | [lazada](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/lazada) |
+| **Tokopedia** | Indonesia | [tokopedia](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/tokopedia) |
+| **Mercado Libre** | Latin America | [mercadolibre](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/mercadolibre) |
+| **Allegro** | Poland and Eastern Europe | [allegro](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/allegro) |
+| **Bol.com** | Netherlands and Belgium | [bolcom](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/bolcom) |
+| **Cdiscount** | France | [cdiscount](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/cdiscount) |
+| **OnBuy** | UK | [onbuy](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/onbuy) |
+| **Rakuten** | Japan | [rakuten](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/rakuten) |
+| **Flipkart** | India | [flipkart](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/flipkart) |
+| **Jumia** | Africa | [jumia](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/jumia) |
+| **Faire** | Wholesale | [faire](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/faire) |
+| **CEX** | UK second-hand | [cex](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/cex) |
+
+## Print on demand
+
+| Platform | Notes | Source |
+| --- | --- | --- |
+| **Printful** | Pays Printful production costs in USDC, triggered by storefront orders | [printful](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/printful) |
+| **Printify** | Same model as Printful | [printify](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/printify) |
+
+## How storefront installs work
+
+The exact path depends on the platform but the shape is consistent:
+
+1. Sign up on AlgoVoi and add a payout address for the chain you want to settle on.
+2. Install the platform's AlgoVoi module from the marketplace or upload the module zip.
+3. Paste your AlgoVoi API key and tenant ID into the module config.
+4. Save. "Pay with USDC" appears at checkout for the customer.
+
+## How marketplace installs work
+
+1. Configure marketplace API credentials in the adapter (Selling Partner Token, eBay OAuth, Shopee Partner Key, etc.).
+2. Run the adapter as a small service or scheduled job.
+3. On every new order, the adapter creates an AlgoVoi hosted-checkout link and writes the URL into the order's notes or messages buyer to confirm payment in USDC.
+
+See each adapter's README for the marketplace-specific bits.

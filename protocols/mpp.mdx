@@ -1,0 +1,106 @@
+---
+title: MPP (Method Payment Protocol)
+description: Charge per call for MCP tools and JSON-RPC methods. AlgoVoi is a registered MPP service across 7 chains.
+---
+
+## What is MPP
+
+The [Method Payment Protocol](https://mpp.dev) is an IETF-flavoured spec for attaching prices to JSON-RPC methods and MCP tools. Where x402 paywalls HTTP endpoints, MPP paywalls **methods**. That makes it the natural fit for [Model Context Protocol](https://modelcontextprotocol.io) servers and structured RPC services.
+
+AlgoVoi is registered in the public MPP services catalogue at [`mpp.dev`](https://mpp.dev) and can be discovered programmatically by MPP clients.
+
+## When to use MPP
+
+<CardGroup cols={2}>
+  <Card title="Monetised MCP tools">
+    Sell access to a `database.query` or `web.scrape` tool inside an MCP server.
+  </Card>
+  <Card title="JSON-RPC paywalls">
+    Charge per `eth_call` shadow on your archive node, per `getBlock` on your indexer.
+  </Card>
+  <Card title="Method-level pricing">
+    Different prices for `read` versus `write` methods on the same service.
+  </Card>
+  <Card title="Agent-discoverable services">
+    AI agents browsing the MPP registry and paying to use any service that fits.
+  </Card>
+</CardGroup>
+
+## How MPP differs from x402
+
+| | x402 | MPP |
+| --- | --- | --- |
+| Granularity | Per HTTP endpoint | Per method (RPC or MCP tool) |
+| Discovery | Walk endpoints | Public registry at mpp.dev |
+| Auth header | `Authorization: Payment …` | `Authorization: Payment …` |
+| Challenge format | `payment_requirements` JSON | `Challenge` object with method name |
+| Best for | REST APIs and content paywalls | RPC services and MCP tools |
+
+Both protocols speak the same `Authorization: Payment` scheme on the wire. AlgoVoi accepts either on the same gateway.
+
+## Quickstart
+
+### 1. Register your service
+
+Define a service entry that points at your MPP-paywalled methods. AlgoVoi can register the entry on `mpp.dev` for you, or you can self-publish.
+
+Service definitions live in `schemas/services.ts` upstream. AlgoVoi's own entry is published there as the canonical reference. See [PR #556](https://github.com/tempoxyz/mpp/pull/556).
+
+### 2. Issue a challenge
+
+Client calls a paid method without payment. Server returns a Challenge:
+
+```json
+{
+  "version": 1,
+  "method": "database.query",
+  "credentials": [
+    {
+      "scheme": "exact",
+      "network": "base:mainnet",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "amount": "5000",
+      "payTo": "0xMerchant…",
+      "validUntil": 1777200300
+    }
+  ]
+}
+```
+
+### 3. Pay and present credential
+
+Client pays on-chain, builds a `Credential` referencing the tx, and retries:
+
+```http
+POST /jsonrpc HTTP/1.1
+Authorization: Payment <base64-credential>
+Content-Type: application/json
+
+{ "jsonrpc": "2.0", "method": "database.query", "params": {...}, "id": 1 }
+```
+
+AlgoVoi verifies the credential, marks the payment consumed, and forwards the call.
+
+## Per-method pricing
+
+A single MPP service can charge different prices for different methods:
+
+```json
+{
+  "id": "your-service",
+  "methods": {
+    "data.read":  { "price_microunits": "100",   "asset": "USDC" },
+    "data.write": { "price_microunits": "10000", "asset": "USDC" }
+  }
+}
+```
+
+## Chain support
+
+Same matrix as [x402](/protocols/x402). All 7 chains supported through the same gateway, configured per-tenant in the dashboard.
+
+## See also
+
+- [x402](/protocols/x402) for HTTP endpoints
+- [AP2](/protocols/ap2) for Google's mandate-based agent commerce
+- [A2A](/protocols/a2a) for x402 over the Agent-to-Agent transport

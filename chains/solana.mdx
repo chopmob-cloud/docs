@@ -1,0 +1,46 @@
+---
+title: Solana
+description: USDC SPL on Solana mainnet and devnet. Solana Pay reference-pubkey binding for cryptographic checkout association.
+---
+
+## At a glance
+
+| | Mainnet | Devnet |
+| --- | --- | --- |
+| Network ID (CAIP-2) | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | `solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1` |
+| Native asset | SOL | SOL |
+| Native decimals | 9 | 9 |
+| Stablecoin | USDC SPL | USDC SPL |
+| Stablecoin mint | `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` | (devnet equivalent) |
+| Stablecoin decimals | 6 | 6 |
+| Confirmation time | Sub-second to 1 second | Sub-second |
+| Typical fee | $0.00025 | Free (devnet airdrop) |
+
+## Solana Pay reference binding
+
+Solana doesn't support arbitrary memos in the way Algorand or Hedera do. Instead, AlgoVoi uses **Solana Pay's `reference` mechanism**: a fresh ed25519 public key generated per checkout, included as a non-signer account in the settlement transaction.
+
+For each Solana checkout:
+
+1. AlgoVoi generates a new ed25519 keypair. Only the public key is stored in the database.
+2. The Solana Pay URL on the checkout page includes `?reference=<pubkey>` alongside `amount` and `spl-token`.
+3. The wallet builds a transaction that includes that pubkey as a non-signer account.
+4. The verifier looks up the settling tx via `getSignaturesForAddress(reference)` against a managed RPC.
+5. The match is cryptographic: no other transaction can satisfy this checkout, even if it sends the right amount to the right address.
+
+This is the same mechanism [Solana Actions and Blinks](/protocols/solana-actions) use to bind a Blink to a specific checkout.
+
+## Associated token accounts
+
+Like SPL tokens generally, USDC requires an **associated token account** (ATA) on the recipient side. AlgoVoi auto-detects whether the payout's ATA exists and creates it as part of the first transfer if needed (paying the small rent fee, which is reimbursed from the next confirmed payment).
+
+## Wallets
+
+- [Phantom](https://phantom.app)
+- [Solflare](https://solflare.com)
+- [Backpack](https://backpack.app)
+
+## See also
+
+- [Solana Actions and Blinks](/protocols/solana-actions) for the Blink rendering
+- [x402 protocol](/protocols/x402) for the payment protocol layer

@@ -1,0 +1,81 @@
+---
+title: KYC and mainnet
+description: How identity verification gates mainnet payments and unlocks the $1,000 free allowance.
+---
+
+## The rule
+
+| Mode | Testnet | Mainnet |
+| --- | --- | --- |
+| `kyb_status = trial` (no KYC) | ✅ | ❌ |
+| `kyb_status = approved` (KYC passed) | ✅ | ✅ |
+
+Mainnet is gated. You must complete KYC to take live payments. Testnet is open to everyone for the 60-day trial.
+
+## Why we gate mainnet
+
+Three reasons:
+
+1. **Sanctions screening.** Live USDC payments go through OFAC, UK, and EU sanctions checks per transaction. We need to know who's accepting them.
+2. **Compliance requirements.** AlgoVoi's regulatory standing requires identifying the merchant of record before settling real money.
+3. **The $1,000 allowance is real money.** We're not handing $1,000 to anonymous accounts.
+
+## Two paths
+
+### Individuals and sole traders: automatic
+
+If you sign up as an individual or sole trader, KYC is **fully automatic** in our identity provider. Pass the liveness check and ID upload and you're approved within minutes, usually under sixty seconds.
+
+### Companies: MLRO review
+
+If you're a registered company, your KYB submission is reviewed by AlgoVoi's MLRO. Typical turnaround is one to two business days. During review your account stays in `pending` state, but you can still use testnet.
+
+## What you need to provide
+
+<Tabs>
+  <Tab title="Individual">
+    - Government-issued photo ID (passport, driving licence, national ID card)
+    - A short liveness selfie video
+    - Proof of address (utility bill or bank statement, dated within 3 months)
+  </Tab>
+  <Tab title="Company">
+    - Certificate of incorporation
+    - Recent companies-house extract (or equivalent)
+    - List of beneficial owners (over 25% holders)
+    - Photo ID and proof of address for each beneficial owner
+    - Authority to act letter, signed by a director
+  </Tab>
+</Tabs>
+
+## After approval
+
+Your account `kyb_status` flips to `approved`. The `mainnet_unlocked` flag goes true. The dashboard shows your `$1,000.00 of $1,000.00 mainnet · all 7 chains` allowance with a teal progress bar. From this point you can:
+
+- Add mainnet payout addresses for any of the 7 chains
+- Take real-money payments through hosted checkout, x402, MPP, AP2, A2A, and MCP
+- Wire bots to mainnet networks
+- Configure the production webhook secret in your generic-webhook destination
+
+## Self-payment block
+
+We block payments where the **payer address equals the merchant payout address** (case-insensitive). Without this, a tenant could pay themselves $1,000 to burn the allowance for about $1 of gas. The check runs at the verifier across all 7 chains.
+
+## What `mainnet_unlocked: false` means
+
+If you try a live network without KYC:
+
+```json
+{
+  "error": "kyb_required_for_mainnet",
+  "message": "Mainnet payments require KYC. Complete identity verification at dash.algovoi.co.uk/kyc to unlock $1,000 of free mainnet allowance.",
+  "kyb_status": "trial",
+  "mode": "live"
+}
+```
+
+You'll get the same error from x402, MPP, AP2, hosted checkout, and the cloud gateway proxy. Every entry point applies the same check, so you don't need to handle KYC failure differently per integration.
+
+## See also
+
+- [Trial and pricing](/trial-and-pricing) for full offer details
+- [Notifications](/concepts/notifications) for getting paid is half the story

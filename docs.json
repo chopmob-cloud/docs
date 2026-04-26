@@ -1,0 +1,128 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "AlgoVoi",
+  "colors": {
+    "primary": "#00C8FF",
+    "light": "#67E8F9",
+    "dark": "#0891B2"
+  },
+  "favicon": "/images/favicon.png",
+  "navigation": {
+    "anchors": [
+      {
+        "anchor": "Documentation",
+        "icon": "book-open",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "trial-and-pricing"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "concepts/architecture",
+              "concepts/chains-overview",
+              "concepts/kyc-and-mainnet",
+              "concepts/payment-links",
+              "concepts/notifications"
+            ]
+          },
+          {
+            "group": "Payment protocols",
+            "pages": [
+              "protocols/x402",
+              "protocols/mpp",
+              "protocols/ap2",
+              "protocols/a2a",
+              "protocols/solana-actions"
+            ]
+          },
+          {
+            "group": "Chains",
+            "pages": [
+              "chains/algorand",
+              "chains/voi",
+              "chains/hedera",
+              "chains/stellar",
+              "chains/base",
+              "chains/solana",
+              "chains/tempo"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "integrations/overview",
+              "integrations/ai-frameworks",
+              "integrations/ai-models",
+              "integrations/ecommerce",
+              "integrations/chat-bots",
+              "integrations/accounting",
+              "integrations/no-code",
+              "integrations/native-sdks",
+              "integrations/mcp-server",
+              "integrations/banking",
+              "integrations/outbound-webhooks"
+            ]
+          },
+          {
+            "group": "Help",
+            "pages": [
+              "support",
+              "incident-protocol",
+              "changelog"
+            ]
+          }
+        ]
+      },
+      {
+        "anchor": "API reference",
+        "icon": "code",
+        "groups": [
+          {
+            "group": "API reference",
+            "pages": [
+              "api-reference/introduction",
+              "api-reference/authentication",
+              "api-reference/errors",
+              "api-reference/rate-limits"
+            ]
+          }
+        ]
+      },
+      {
+        "anchor": "GitHub",
+        "href": "https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters",
+        "icon": "github"
+      }
+    ]
+  },
+  "logo": {
+    "light": "/images/logo-light.svg",
+    "dark": "/images/logo-dark.svg"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Dashboard",
+        "href": "https://dash.algovoi.co.uk"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Sign up",
+      "href": "https://dash.algovoi.co.uk/signup"
+    }
+  },
+  "footer": {
+    "socials": {
+      "x": "https://x.com/algovoi",
+      "github": "https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters"
+    }
+  }
+}

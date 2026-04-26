@@ -1,0 +1,73 @@
+---
+title: Authentication
+description: Bearer API key plus X-Tenant-Id header. Key types, prefixes, rotation.
+---
+
+## The two headers
+
+Every authenticated request sends two headers:
+
+```http
+Authorization: Bearer <YOUR_API_KEY>
+X-Tenant-Id: <YOUR_TENANT_ID>
+```
+
+Why both? The API key proves you're allowed to act, and `X-Tenant-Id` selects which tenant you're acting on. Many keys can have admin scope across multiple tenants, so the gateway needs both bits to route the request.
+
+## Key types
+
+Three key prefixes distinguish purpose:
+
+| Prefix | Type | Where it lives |
+| --- | --- | --- |
+| `algv_…` | Tenant-scoped API key | Used by your backend for normal API calls |
+| `algvc_…` | Admin / control-plane key | Issued to operators only. Has scope to manage tenants. |
+| `algvw_…` | Webhook signing secret | Per-destination. Used by AlgoVoi to sign outbound webhooks; receivers use it to verify. |
+
+Keys are returned once, on creation. Storage afterwards is one-way hashed in the database, so we can't show you the key value again. Lose it and you rotate.
+
+## Where to get a key
+
+Sign in to `dash.algovoi.co.uk` and go to **Settings → API keys**. New keys can be scoped per-environment (test or live) and per-purpose (read-only, payment-write, etc.).
+
+## Rotation
+
+Rotation is a one-click operation in the dashboard:
+
+1. Click **Rotate** on the key you want to replace.
+2. The dashboard issues a new key and shows it once.
+3. Both the old key and the new key are valid for 30 days.
+4. After 30 days the old key is revoked.
+
+This window lets you redeploy your backend with the new key without dropping requests. If you need a longer or shorter overlap, configure it on the rotation page.
+
+## Webhook secret rotation
+
+Webhook signing secrets rotate the same way. AlgoVoi will sign with the new secret immediately, but accept signatures from the old secret as valid for 30 days during the overlap window. Receivers can verify with both during the overlap.
+
+## Test mode versus live mode
+
+Each key is bound to a mode:
+
+- **Test mode** keys can only call testnet networks (Algorand testnet, Base Sepolia, Solana devnet, etc.).
+- **Live mode** keys can call mainnet, but only after the tenant has passed KYC. See [KYC and mainnet](/concepts/kyc-and-mainnet).
+
+A key cannot switch modes. Rotate a new key in the other mode if you need to switch.
+
+## Scopes (admin keys)
+
+Admin keys carry a scope list. Common scopes:
+
+- `tenants:admin`
+- `apikeys:admin`
+- `kyb:write`
+- `live:activate`
+- `payments:read`
+- `audit:read`
+
+Most tenant integrations don't need admin keys at all. The tenant-scoped `algv_…` key covers the entire normal payment surface.
+
+## See also
+
+- [API introduction](/api-reference/introduction) for base URL and content type
+- [Errors](/api-reference/errors) for what 401 and 403 responses look like

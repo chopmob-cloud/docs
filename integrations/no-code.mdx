@@ -1,0 +1,50 @@
+---
+title: No-code platforms
+description: Wire AlgoVoi into Pabbly Connect, Activepieces, GiveWP, and Gravity Forms without writing any code.
+---
+
+The no-code adapters are pre-built workflow steps you can drop into a visual automation builder. They expose the same gateway actions (create checkout, verify payment, list networks) as the REST API, but you wire them through a UI.
+
+## Available platforms
+
+| Platform | Type | Notes | Source |
+| --- | --- | --- | --- |
+| **Pabbly Connect** | iPaaS workflow builder | Triggers and actions for crypto payments | [no-code/pabbly](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/no-code/pabbly) |
+| **Activepieces** | Open-source automation platform | Same shape as Pabbly | [no-code/activepieces](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/no-code/activepieces) |
+| **GiveWP** | WordPress donation plugin | Crypto-donation gateway | [no-code/givewp](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/no-code/givewp) |
+| **Gravity Forms** | WordPress form builder | Adds a payment field that creates an AlgoVoi link | [no-code/gravity-forms](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/no-code/gravity-forms) |
+| **X (Twitter) automation** | Auto-tweet on payment, share checkout links | Pairs with the X bot | [no-code/x](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/no-code/x) |
+
+## Pabbly Connect (live in the public app store)
+
+AlgoVoi is published as a Pabbly Connect app. To use it:
+
+1. Log in at [connect.pabbly.com](https://connect.pabbly.com).
+2. Create a workflow and search for **AlgoVoi**.
+3. Connect with an `algv_…` API key. The API base defaults to `https://cloud.algovoi.co.uk`.
+4. Leave Tenant ID and payout-address fields blank if you're using the cloud-managed flow. The cloud gateway pulls those from the tenant attached to your API key.
+
+Direct-API users can switch the API base to `https://api1.ilovechicken.co.uk` and fill in Tenant ID plus payout addresses explicitly.
+
+### Actions
+
+- **Create payment link** generates a hosted-checkout URL.
+- **Verify payment** checks on-chain status by token.
+- **List networks** returns all supported chains and assets.
+
+### Triggers
+
+- **Payment confirmed** fires an instant webhook when a payment settles on-chain.
+
+## Activepieces
+
+Same shape as Pabbly Connect, but self-hosted under your own Activepieces instance. Use this if you don't want to depend on a third-party SaaS workflow runner.
+
+## WordPress family
+
+GiveWP and Gravity Forms are WordPress plugins. Install them through the normal WordPress admin, paste your AlgoVoi API key, and a "Pay with USDC" payment option appears in the donation form or form-builder field.
+
+## See also
+
+- [Outbound webhooks](/integrations/outbound-webhooks) for posting the same `payment.confirmed` event to your own backend
+- [Chat bots](/integrations/chat-bots) for the conversational equivalent (Telegram, Discord, etc.)

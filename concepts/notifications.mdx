@@ -1,0 +1,61 @@
+---
+title: Notifications
+description: Slack, Discord, Teams, Telegram, Mattermost, Rocket.Chat, Google Chat, Zulip, generic webhook. Same retry stack behind every destination.
+---
+
+When a payment confirms on-chain, AlgoVoi can deliver the event to up to nine destinations per tenant.
+
+## The nine destinations
+
+| Logo | Destination | Type |
+| --- | --- | --- |
+| Slack | Slack | Block Kit message |
+| Discord | Discord | Embed |
+| Teams | Microsoft Teams | Adaptive Card |
+| Mattermost | Mattermost | Slack-compatible |
+| Rocket.Chat | Rocket.Chat | Slack-compatible |
+| Google Chat | Google Chat | Cards v2 |
+| Zulip | Zulip | Text message with topic |
+| Telegram | Telegram | `sendMessage` (per chat ID) |
+| Webhook | Generic webhook | Stripe-shaped JSON |
+
+Eight of these are designed for **ops humans** (a payment-team Slack channel, a finance-team Teams channel). One is the **machine destination**: the generic webhook posts a Stripe-shaped event to your own backend, signed with HMAC-SHA256.
+
+## What's the same across destinations
+
+Every destination shares the same delivery infrastructure:
+
+- **Per-destination signing secret**, prefixed `algvw_…`, rotatable from the dashboard.
+- **Auto-retry**: 30s, 2 min, 10 min, 1 h, 6 h, then dead-letter. Six attempts over about 32 hours.
+- **Audit log** at `dash.algovoi.co.uk/notifications` showing every delivery attempt with status, attempt count, last HTTP code, last error, payload preview.
+- **Manual retry**: the audit log has a "retry" button for failed deliveries.
+- **At-least-once delivery**: receivers must dedupe on the event `id`.
+
+## What's different
+
+For chat-style destinations, AlgoVoi builds a human-readable message tailored to that destination's card format (Slack Block Kit, Teams Adaptive Card, etc.). For the generic webhook, AlgoVoi sends a [Stripe-shaped event JSON](/integrations/outbound-webhooks).
+
+## Configuring destinations
+
+In the dashboard go to **Settings → Notifications**. Add a destination:
+
+- For Slack, paste an incoming-webhook URL.
+- For Discord, paste a channel webhook URL.
+- For Teams, paste a workflow URL.
+- For Telegram, paste a bot token plus a chat ID.
+- For the generic webhook, paste any HTTPS URL.
+
+Each destination gets its own per-destination signing secret. Secrets are returned once, on creation, and stored as encrypted blobs in the database afterwards. Rotation generates a new secret and immediately invalidates the previous one.
+
+## Same offer text everywhere
+
+Adding a tenth destination is a one-file change in the gateway. The existing nine all share the same payload-builder dispatch table.
+
+## Reliability
+
+Notifier failures **never** block on-chain confirmation. The first delivery attempt fires inline at payment confirmation (typically sub-second), but if it fails, the customer-facing 200 response is unaffected. The retry queue picks up failed deliveries on a 30-second tick.
+
+## See also
+
+- [Outbound webhooks](/integrations/outbound-webhooks) for the generic-webhook payload schema
+- [Quickstart](/quickstart) for setting up your first webhook

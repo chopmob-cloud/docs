@@ -1,0 +1,57 @@
+---
+title: Support
+description: How to get help with AlgoVoi. Email, GitHub, security disclosures.
+---
+
+## Where to ask
+
+<CardGroup cols={2}>
+  <Card title="Email" icon="envelope" href="mailto:support@algovoi.co.uk">
+    Primary channel. Email `support@algovoi.co.uk` for anything except security disclosures (see below).
+  </Card>
+  <Card title="GitHub" icon="github" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters">
+    Bug reports and adapter PRs on the public adapters repo.
+  </Card>
+  <Card title="Security disclosures" icon="shield" href="mailto:security@algovoi.co.uk">
+    Email `security@algovoi.co.uk` for vulnerabilities and anything sensitive.
+  </Card>
+</CardGroup>
+
+## What to include in a support request
+
+- **Tenant ID.** Find it in **Settings** in the dashboard. It's a UUID.
+- **Mode.** Test or live.
+- **Chain.** For example `base_mainnet`.
+- **Tx ID** if a specific transaction is involved.
+- **Time window** in UTC so we can grep logs.
+- **What you expected versus what happened.**
+
+## Response targets
+
+| Channel | Target |
+| --- | --- |
+| Email (`support@`) | Within 2 working days |
+| Critical incident (chain down, gateway 5xx) | Within 1 hour during UK business hours, best-effort otherwise |
+| Security disclosure (`security@`) | Acknowledged within 24 hours |
+
+## Self-serve before opening a ticket
+
+Most questions are answered in:
+
+- [Quickstart](/quickstart) for first integration steps
+- [Outbound webhooks](/integrations/outbound-webhooks) for webhook payload and HMAC verification
+- [KYC and mainnet](/concepts/kyc-and-mainnet) when a live payment errors
+- [Trial and pricing](/trial-and-pricing) for billing questions
+
+## Incident reporting
+
+If you suspect AlgoVoi is down or a chain is degraded:
+
+1. Email `support@algovoi.co.uk` with the chain, tenant ID, sample tx_id, and UTC timestamp.
+2. For confirmed multi-tenant outages we reply within the response targets above.
+
+See [Incident protocol](/incident-protocol) for the full response runbook.
+
+## Security disclosures
+
+For security-sensitive reports, **do not open a public GitHub issue**. Email `security@algovoi.co.uk` with details. We acknowledge within 24 hours and coordinate disclosure timing with you.

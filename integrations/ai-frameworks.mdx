@@ -1,0 +1,63 @@
+---
+title: AI agent frameworks
+description: Payment-gate any agent, chain, tool, or workflow built with the framework you already use.
+---
+
+Every adapter wraps your framework's normal call surface and inserts a `check()` step that returns an HTTP 402 challenge when payment is missing. The client pays on-chain, retries with proof, and the call goes through. Same shape across all 12 frameworks.
+
+## Available adapters
+
+| Framework | What it gates | Source |
+| --- | --- | --- |
+| **LangChain** | LLMs, chains, agent tool endpoints | [langchain](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ai-agent-frameworks/langchain) |
+| **LangGraph** | Compiled `StateGraph` execution | [langgraph](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ai-agent-frameworks/langgraph) |
+| **CrewAI** | Crews, tasks, agent tools | [crewai](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ai-agent-frameworks/crewai) |
+| **AutoGen** | Conversations, callable tools | [autogen](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ai-agent-frameworks/autogen) |
+| **AG2** | Multi-agent flows | (via AutoGen) |
+| **DSPy** | Modules, programs, chains | [dspy](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ai-agent-frameworks/dspy) |
+| **LlamaIndex** | LLMs, query engines, chat engines, ReAct agent tools | [llamaindex](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ai-agent-frameworks/llamaindex) |
+| **Pydantic AI** | Agents, model calls | [pydantic-ai](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ai-agent-frameworks/pydantic-ai) |
+| **Vercel AI SDK** | Model calls, tool calls | [vercel-ai-sdk](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ai-agent-frameworks/vercel-ai-sdk) |
+| **Semantic Kernel** | Chat completions, `KernelFunction`, plugins | [semantic-kernel](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ai-agent-frameworks/semantic-kernel) |
+| **Hugging Face** | `InferenceClient`, `transformers` pipelines, `smolagents` tools | [huggingface](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ai-agent-frameworks/huggingface) |
+| **Agno** | Agno agents | [agno](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ai-agent-frameworks/agno) |
+| **Google A2A** | A2A endpoints (server side) | [a2a](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/ai-agent-frameworks/a2a) |
+
+## Common shape
+
+Every adapter has the same three-method surface:
+
+```python
+from algovoi_<framework> import AlgoVoi<Framework>
+
+adapter = AlgoVoi<Framework>(
+    api_base="https://api1.ilovechicken.co.uk",
+    api_key="algv_…",
+    tenant_id="…",
+    webhook_secret="algvw_…",
+)
+
+# 1. Check payment status before invocation
+status = adapter.check(resource_id="premium-call")
+
+# 2. If unpaid, surface a challenge to the client
+if not status.paid:
+    raise adapter.PaymentRequired(status.challenge)
+
+# 3. Run the wrapped call
+result = adapter.run(...)  # framework-specific
+```
+
+## Picking a protocol
+
+Each adapter supports x402, MPP, and AP2 on the same code path. Pick the one that matches your client:
+
+- **x402** for HTTP-fronted endpoints. The most common case for LangChain or Vercel AI SDK servers.
+- **MPP** for JSON-RPC or MCP-server-backed tools. Use when the call is method-shaped, not URL-shaped.
+- **AP2** for autonomous agents acting on a signed mandate.
+
+See the protocol pages for detail: [x402](/protocols/x402), [MPP](/protocols/mpp), [AP2](/protocols/ap2).
+
+## Versioning
+
+All adapters track v1.0.0 of the shared client surface. Behaviour and method names are identical across frameworks; only the wrapping layer changes. If you switch frameworks you keep the same AlgoVoi configuration.

@@ -1,0 +1,107 @@
+---
+title: Quickstart
+description: Take your first AlgoVoi payment in five minutes. Sign up, pick a chain, generate a checkout link, confirm settlement.
+---
+
+## What you'll do
+
+By the end of this page you'll have:
+
+1. A tenant account on `dash.algovoi.co.uk`
+2. A payout address configured for one chain (testnet)
+3. A hosted-checkout link
+4. A confirmed payment on-chain, with a signed webhook event delivered
+
+Five minutes total. No code changes to your app yet, that comes after.
+
+## 1. Sign up
+
+Head to [dash.algovoi.co.uk/signup](https://dash.algovoi.co.uk/signup) and create your tenant. You get **60 days of free testnet** straight away. KYC unlocks $1,000 of free mainnet payments. See [Trial and pricing](/trial-and-pricing) for the full offer.
+
+<Tip>
+Skip KYC during the testnet trial. Only complete it when you're ready to take real money.
+</Tip>
+
+## 2. Add a payout address
+
+In the dashboard go to **Settings → Networks**. Pick a chain (Algorand testnet is the fastest to demo) and paste a wallet address you control. This is where settled payments will land.
+
+<Warning>
+The payout address is **non-custodial**. AlgoVoi never holds the funds. They go straight to this address the moment a transaction is verified on-chain.
+</Warning>
+
+## 3. Create a checkout link
+
+```bash
+curl -X POST https://api1.ilovechicken.co.uk/v1/payment-links \
+  -H "Authorization: Bearer $ALGOVOI_API_KEY" \
+  -H "X-Tenant-Id: $TENANT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 1.00,
+    "currency": "USD",
+    "label": "First test payment",
+    "preferred_network": "algorand_testnet"
+  }'
+```
+
+You get back a `checkout_url`. Open it in a browser and you'll see a hosted page with a QR code, the receiving address, and the exact amount to send.
+
+```json
+{
+  "checkout_url": "https://api1.ilovechicken.co.uk/checkout/abc123",
+  "token": "abc123",
+  "chain": "algorand-testnet",
+  "amount_microunits": 1000000,
+  "expires_at": "2026-04-26T18:00:00Z"
+}
+```
+
+## 4. Pay it
+
+Send the requested amount from any Algorand testnet wallet (Pera, Defly, MyAlgo) to the address on the checkout page. Include the memo shown. That memo is how AlgoVoi binds the transaction to your specific checkout link.
+
+When the transaction confirms (about five seconds on Algorand) the page auto-detects it and flips to "Paid".
+
+## 5. Receive the webhook
+
+If you've configured a generic webhook in **Settings → Notifications**, AlgoVoi posts a Stripe-shaped event to your endpoint:
+
+```json
+{
+  "id": "evt_a3f7c192-d8e1-4b6c-9f0a-7b1e2c4d8e3f",
+  "type": "payment.confirmed",
+  "created": 1777200000,
+  "api_version": "1",
+  "data": {
+    "tenant_label": "First test payment",
+    "chain": "algorand:testnet",
+    "asset": { "id": "10458941", "label": "USDC", "decimals": 6 },
+    "amount_microunits": "1000000",
+    "amount_pretty": "1 USDC",
+    "tx_id": "ABCD1234EFGH5678…",
+    "payer_address": "GHSRL2SAY247…MWI"
+  }
+}
+```
+
+Every event is signed with HMAC-SHA256 in a Stripe-compatible header (`X-AlgoVoi-Signature: t=<unix>,v1=<hex>`). Verify it against the per-destination secret you got from the dashboard. Receivers should dedupe on the `id` field, since events may be redelivered if your endpoint times out.
+
+For the full payload schema and a verification example, see [Outbound webhooks](/integrations/outbound-webhooks).
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Pick a payment protocol" icon="puzzle-piece" href="/protocols/x402">
+    Hosted checkout is the easiest path. For agent or API payments, use x402, MPP, AP2, or A2A.
+  </Card>
+  <Card title="Wire your stack" icon="plug" href="/integrations/overview">
+    Drop-in adapters for Shopify, Discord and Telegram bots, and 17 AI frameworks.
+  </Card>
+  <Card title="Go live" icon="rocket" href="/concepts/kyc-and-mainnet">
+    Pass KYC to unlock $1,000 of free mainnet payments across all 7 chains.
+  </Card>
+  <Card title="Support" icon="life-ring" href="/support">
+    Where to ask questions and how to reach us during incidents.
+  </Card>
+</CardGroup>

@@ -1,0 +1,58 @@
+---
+title: Incident protocol
+description: How AlgoVoi detects, communicates, and recovers from chain or gateway incidents.
+---
+
+## How we detect
+
+The status page (Better Stack, when live) runs synthetic checks against:
+
+- The gateway public endpoint at `api1.ilovechicken.co.uk`
+- The facilitator endpoint
+- One monitor per chain's RPC or indexer (Algorand, VOI, Hedera, Stellar, Base, Solana, Tempo)
+
+A multi-region failure on any monitor opens an incident.
+
+## How we communicate
+
+When a real incident is open:
+
+- We post a short status update on the public status page within 5 minutes of detection.
+- Tenants subscribed to the status page get email notifications automatically.
+- For UK-business-hours incidents we update every 15 minutes until resolution.
+- A post-incident summary lands within 48 hours of resolution, covering what happened, what failed, what we changed.
+
+## What "degraded" means
+
+A chain marked **degraded** rather than **down** means we can still verify the chain but with raised latency. Payments still settle, just slower. Don't switch off the chain in your dashboard; AlgoVoi's facilitator will route around the slow node automatically.
+
+A chain marked **down** means the chain's primary RPC is unreachable. Payments on that chain pause. Once the RPC recovers, queued verifications drain in normal order.
+
+## What you can do during a chain-specific incident
+
+- **If you have multi-chain payouts configured**, your customers can pick a different chain. Recommend a working alternative in your checkout copy.
+- **If you depend on one chain only**, you can either wait or temporarily pause new checkout creation on that chain in **Settings → Networks**.
+- **If you have time-sensitive payments** (an agent-mediated AP2 mandate that's about to expire), the mandate's expiry can be extended on request via support.
+
+## How to reach a human
+
+For incidents you suspect AlgoVoi hasn't seen yet:
+
+1. Email `support@algovoi.co.uk` with the chain, tenant ID, sample tx_id (if any), and UTC timestamp of the first failed verification.
+2. We'll reply within 1 hour during UK business hours, best-effort outside that window.
+3. If the issue is multi-tenant we'll post on the status page within 5 minutes of confirming.
+
+## Post-mortem cadence
+
+Public post-mortems are published for any incident that:
+
+- Caused tenant-visible payment failures for more than 30 minutes
+- Touched data integrity (any payment recorded incorrectly)
+- Required a security disclosure
+
+We don't post-mortem every short outage, just the ones that mattered.
+
+## See also
+
+- [Support](/support) for non-incident questions
+- [Trial and pricing](/trial-and-pricing) for SLA-style commitments at higher tiers

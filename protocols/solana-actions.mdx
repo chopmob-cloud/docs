@@ -1,0 +1,57 @@
+---
+title: Solana Actions and Blinks
+description: AlgoVoi exposes hosted checkouts as Solana Actions, callable from any Blink-aware client (dial.to, X, Discord).
+---
+
+## What is a Solana Action
+
+[Solana Actions](https://solana.com/developers/guides/getstarted/blinks) are URLs that return an **unsigned VersionedTransaction** for a wallet to sign. **Blinks**, short for blockchain links, render those Actions inline in social-media clients. Paste a link in X or Discord and the user gets a one-click pay button.
+
+AlgoVoi's hosted-checkout tokens are Solana Actions. Any Blink-aware client can render them.
+
+## Live endpoint
+
+```
+GET  https://api1.ilovechicken.co.uk/actions/checkout/{token}
+POST https://api1.ilovechicken.co.uk/actions/checkout/{token}
+GET  https://api1.ilovechicken.co.uk/actions.json
+```
+
+The Cloudflare layer adds the required `X-Action-Version: 2.1.3` and `X-Blockchain-Ids` response headers automatically.
+
+## How it works
+
+1. Tenant creates a hosted-checkout link for a Solana payment in the dashboard or via API.
+2. The `checkout_url` doubles as a Solana Action URL when fed to a Blink-aware client.
+3. The Action returns an unsigned VersionedTransaction containing an SPL Token Transfer (USDC by default) and the checkout's `reference` pubkey as a non-signer account.
+4. Client signs and submits to Solana.
+5. AlgoVoi detects settlement via `getSignaturesForAddress(reference)`. No memo is needed because Solana Pay's reference binding does the equivalent job.
+
+## Solana Pay reference binding
+
+Unlike Algorand, VOI, or Hedera (which use memos) or Stellar (short text memo), Solana checkouts use Solana Pay's [reference pubkey](https://docs.solanapay.com/spec) mechanism. AlgoVoi:
+
+- Generates a fresh ed25519 keypair per checkout (only the public key is stored).
+- Includes the pubkey as a non-signer account in the transaction.
+- Looks up the settling tx by querying `getSignaturesForAddress(reference)` against a managed RPC.
+
+This binding is cryptographic. No other transaction can satisfy this checkout, even if it sends the right amount to the right address.
+
+## Dialect Registry
+
+AlgoVoi's checkouts are registered with the [Dialect Registry](https://dial.to/register), so they render natively in:
+
+- [dial.to](https://dial.to), the canonical Blink renderer
+- X (Twitter), where Blinks appear inline in posts
+- Discord, where Blinks render in any channel
+- Any client embedding the Dialect Blinks SDK
+
+## Open-source plugin
+
+AlgoVoi ships as a `solana-agent-kit` plugin alongside `sendarcade`. See [PR #561](https://github.com/sendaifun/solana-agent-kit/pull/561), which adds an `AlgoVoi` provider to `plugin-blinks` with no new npm dependencies. AI agents using `solana-agent-kit` can mint and pay AlgoVoi blinks without any AlgoVoi-specific SDK.
+
+## See also
+
+- [Solana chain notes](/chains/solana) for RPC, USDC mint, and fee model
+- [x402](/protocols/x402), the underlying payment protocol
+- [Solana Pay spec](https://docs.solanapay.com)

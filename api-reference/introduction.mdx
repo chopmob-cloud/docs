@@ -1,0 +1,64 @@
+---
+title: API introduction
+description: REST API at api1.ilovechicken.co.uk. Auth, base URL, content type, idempotency.
+---
+
+## Base URL
+
+All REST endpoints live at:
+
+```
+https://api1.ilovechicken.co.uk
+```
+
+The cloud edge at `cloud.algovoi.co.uk` proxies a subset of public-read endpoints and chat-bot webhooks but is not the canonical API. Use `api1.*` for any authenticated API calls from your backend.
+
+## Content type
+
+Every request sends and receives `application/json`. The gateway rejects other content types with HTTP 415.
+
+```http
+Content-Type: application/json
+Accept: application/json
+```
+
+## Versioning
+
+The REST API is unversioned in the URL. Breaking changes are gated by feature flag and announced in the [changelog](/changelog) before any rollout. Webhook payloads carry an `api_version` field so receivers can detect schema changes.
+
+## Idempotency
+
+For endpoints that create resources (`POST /v1/payment-links`, `POST /v1/resources`, etc.) you can include an `Idempotency-Key` header. Replays with the same key within 24 hours return the originally-created resource without creating a duplicate.
+
+```http
+Idempotency-Key: 7c3a9f1d-…
+```
+
+## Request IDs
+
+Every response includes an `X-Request-Id` header. Include it in support requests so we can find the matching server log line in seconds.
+
+## Authentication
+
+Every authenticated endpoint requires:
+
+```http
+Authorization: Bearer <YOUR_API_KEY>
+X-Tenant-Id: <YOUR_TENANT_ID>
+```
+
+See [Authentication](/api-reference/authentication) for the full key types, prefixes, and rotation flow.
+
+## Errors
+
+JSON envelope: `{ "error": "code_string", "message": "human-readable", ...context }`. See [Errors](/api-reference/errors) for the full code list and HTTP-status mapping.
+
+## Rate limits
+
+Default tenant limit is 300 requests per minute with a burst of 60. Returns `429 Too Many Requests` with `Retry-After` headers. See [Rate limits](/api-reference/rate-limits).
+
+## See also
+
+- [Authentication](/api-reference/authentication)
+- [Errors](/api-reference/errors)
+- [Rate limits](/api-reference/rate-limits)

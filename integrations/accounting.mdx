@@ -1,0 +1,36 @@
+---
+title: Accounting and invoicing
+description: Attach an AlgoVoi crypto-payment link to invoices in Xero, QuickBooks, FreshBooks, MYOB, Sage, Wave, or Zoho Books.
+---
+
+The accounting adapters watch your invoicing platform and create a hosted-checkout link automatically when an invoice is created or sent. The link goes into the invoice itself (as a payment URL or note) so your customers can pay in USDC without leaving the invoice email.
+
+## Available adapters
+
+| Platform | Trigger | Notes | Source |
+| --- | --- | --- | --- |
+| **Xero** | Invoice reaches `AUTHORISED` status | Template mode by default. Auto-writeback requires a Xero Partner certificate. | [xero](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/xero) |
+| **QuickBooks Online** | Invoice created | Direct API integration | [quickbooks-online](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/quickbooks-online) |
+| **FreshBooks** | Invoice created or sent | Direct API integration | [freshbooks](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/freshbooks) |
+| **MYOB** | Unpaid invoices on AccountRight or Essentials | Polled, no push webhooks | [myob](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/myob) |
+| **Sage Business Cloud** | Unpaid invoices | Scheduled poll, since Sage doesn't push webhooks | [sage-business-cloud](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/sage-business-cloud) |
+| **Wave** | Unpaid invoices via Wave's GraphQL API | Direct API integration | [wave](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/wave) |
+| **Zoho Books** | Invoice created | Direct API integration | [zoho-books](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/zoho-books) |
+
+## Accepted assets
+
+All accounting adapters accept USDC on Algorand and aUSDC on VOI by default. Other chains can be enabled per-tenant in the dashboard once you've added a payout address for them.
+
+## Two integration shapes
+
+**Template mode** (default for Xero on the free Trial plan, also available for any platform). The adapter generates an AlgoVoi checkout URL and pastes it into the invoice's "Terms" or "Payment advice" field. The customer clicks the link and pays. You manually mark the invoice paid in your accounting platform once the payment confirms.
+
+**Auto-writeback mode** (requires the platform's payment-write API access). On payment confirmation, the adapter calls the platform's API to mark the invoice paid, attach the on-chain transaction reference, and reconcile the line. No manual marking.
+
+For Xero specifically, auto-writeback requires a Partner certificate from Xero Identity. Until that's granted, template mode is the live path.
+
+## See also
+
+- [Concept: payment links](/concepts/payment-links) for what the URL the adapter generates actually points at
+- [Trial and pricing](/trial-and-pricing) for billing context (the 0.50% take rate after the $1,000 allowance)
+- [Outbound webhooks](/integrations/outbound-webhooks) if you want the payment event posted to your own backend in addition to the writeback
