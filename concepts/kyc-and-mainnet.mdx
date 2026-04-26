@@ -47,6 +47,19 @@ If you're a registered company, your KYB submission is reviewed by AlgoVoi's MLR
   </Tab>
 </Tabs>
 
+## How we store your documents
+
+Every KYC and KYB document you upload (passport, selfie, proof of address, beneficial-owner ID, source-of-funds letter) is **encrypted at rest**. The specifics:
+
+- **AES-128-CBC with HMAC-SHA256** (Fernet symmetric encryption) applied to every file before it touches disk. Plaintext only exists in memory while a request is being processed.
+- **A dedicated encryption key**, separate from the key used for tenant secrets. A compromise of one class of data cannot expose the other.
+- **Multi-key rotation** is supported, so the encryption key can be rotated without downtime.
+- **Zero plaintext in backups.** Backups are bytes-on-disk, so ciphertext on the source means ciphertext in the backup.
+- **AML retention** is honoured: documents are retained until the business relationship ends plus 5 years (UK MLRs Reg 40(2)) and never auto-purged.
+- **Access** is admin-authenticated. Downloads stream through the control plane; no public URLs and no presigned exposure.
+
+For the regulator-facing version of this position (UK GDPR Art 32, MLRs Reg 19, interim controls and triggers), see the platform security policy at `docs/SECURITY_KYB_AT_REST_2026-04-26.md` in the platform repo.
+
 ## After approval
 
 Your account `kyb_status` flips to `approved`. The `mainnet_unlocked` flag goes true. The dashboard shows your `$1,000.00 of $1,000.00 mainnet · all 7 chains` allowance with a teal progress bar. From this point you can:

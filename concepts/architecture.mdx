@@ -50,7 +50,12 @@ Multiple feeds are consulted with median outlier rejection. If the oracle is una
 
 ## Encryption at rest
 
-Tenant secrets (API keys, webhook secrets, OAuth tokens) are stored encrypted with Fernet. The gateway holds the Fernet key in env. Rotation is multi-key (MultiFernet) to allow zero-downtime rolls.
+Two classes of sensitive data, two separate encryption keys, both AES-128-CBC + HMAC-SHA256 (Fernet) with multi-key rotation support.
+
+- **Tenant secrets** (API keys, webhook secrets, OAuth tokens, MFA TOTP seeds) are encrypted with the platform's primary key. Used by the dashboard and the gateway when reading config rows.
+- **KYC and KYB documents** (passport scans, biometric selfies, proofs of address, beneficial-owner passports, source-of-funds letters) are encrypted with a **separate key** so that a compromise of one class of data cannot expose the other. Every document on disk carries an `AVK1` magic header so the loader can verify the file is encrypted before serving it.
+
+Both key stacks support zero-downtime rotation (an old key fallback is honoured during a roll). Plaintext only ever exists in memory while a request is being processed: encrypt-then-write on upload, read-then-decrypt on download under admin auth.
 
 ## See also
 
