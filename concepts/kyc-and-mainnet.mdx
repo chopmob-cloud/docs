@@ -1,6 +1,6 @@
 ---
 title: KYC and mainnet
-description: How identity verification gates mainnet payments and unlocks the $1,000 free allowance.
+description: How identity verification gates mainnet payments and unlocks the \$1,000 free allowance.
 ---
 
 ## The rule
@@ -18,7 +18,7 @@ Three reasons:
 
 1. **Sanctions screening.** Live USDC payments go through OFAC, UK, and EU sanctions checks per transaction. We need to know who's accepting them.
 2. **Compliance requirements.** AlgoVoi's regulatory standing requires identifying the merchant of record before settling real money.
-3. **The $1,000 allowance is real money.** We're not handing $1,000 to anonymous accounts.
+3. **The \$1,000 allowance is real money.** We're not handing \$1,000 to anonymous accounts.
 
 ## Two paths
 
@@ -71,7 +71,7 @@ Your account `kyb_status` flips to `approved`. The `mainnet_unlocked` flag goes 
 
 ## Self-payment block
 
-We block payments where the **payer address equals the merchant payout address** (case-insensitive). Without this, a tenant could pay themselves $1,000 to burn the allowance for about $1 of gas. The check runs at the verifier across all 7 chains.
+We block payments where the **payer address equals the merchant payout address** (case-insensitive). Without this, a tenant could pay themselves \$1,000 to burn the allowance for about \$1 of gas. The check runs at the verifier across all 7 chains.
 
 ## What `mainnet_unlocked: false` means
 
