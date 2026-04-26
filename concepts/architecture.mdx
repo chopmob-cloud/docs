@@ -13,6 +13,7 @@ flowchart LR
   Edge -->|proxy| Gateway[Gateway cluster]
   Gateway -->|verify| Facilitator[Facilitator cluster]
   Facilitator -->|read| Chain
+  Gateway -->|FX for native assets| Oracle[Price oracle]
   Gateway -->|deliver| Tenant[Your endpoint]
 ```
 
@@ -40,6 +41,12 @@ Three reasons for the split:
 ## Database
 
 Postgres is used throughout.
+
+## Price oracle
+
+A managed price oracle converts native-asset amounts (ALGO, VOI, HBAR, XLM, ETH, SOL) into USD cents at confirmation time. Stablecoin payments don't use it (USDC at six decimals divides cleanly into cents); native-asset payments do. The oracle is what lets the trial allowance and the volume tiers stay denominated in USD even when the underlying chain is paid in a volatile asset.
+
+Multiple feeds are consulted with median outlier rejection. If the oracle is unavailable, native-asset payments are queued rather than failed, and confirmation latency increases until the feed recovers.
 
 ## Encryption at rest
 
