@@ -22,3 +22,4 @@ Boots a hot-reloading preview at `http://localhost:3000`.
 ## Reporting issues
 
 For documentation issues, open a PR or an issue on this repo. For platform issues, email [support@algovoi.co.uk](mailto:support@algovoi.co.uk).
+
