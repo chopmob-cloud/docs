@@ -29,7 +29,49 @@ request CTA.
     lists, daily feed refresh). Name-level + PEP screening framework
     defined; commercial data feed in preparation.
   </Card>
+  <Card title="URL / IP screening" icon="filter">
+    4 enforcement points: signup IP, checkout `redirect_url`, webhook
+    config, webhook delivery DNS-rebinding guard. 7 free threat-intel
+    feeds (Tor, SpamHaus, URLhaus, ThreatFox, OpenPhish, PhishTank,
+    MaxMind GeoLite2) refreshed hourly. SSRF defense always on.
+  </Card>
 </CardGroup>
+
+## URL / IP screening
+
+Four enforcement points run synchronously, each blocking the operation
+before completion:
+
+1. **Signup IP** at `/cloud-signup/create` — Tor exit nodes, SpamHaus
+   DROP/EDROP, GeoIP-based sanctioned-jurisdiction (DPRK / Iran /
+   Syria / Cuba) hard-block; FATF grey-list jurisdictions escalate to
+   MLRO.
+2. **Checkout `redirect_url`** at every checkout-link creation —
+   sanctioned-jurisdiction TLD; URLhaus / PhishTank / OpenPhish /
+   ThreatFox feed match; UK bank-brand homograph; RDAP-based
+   newly-registered-domain (under 30 days); redirect-chain following up
+   to 5 hops.
+3. **Webhook destination** at every webhook configuration — SSRF
+   defense (RFC 1918, link-local, cloud-metadata, RFC 6761 reserved
+   suffixes, non-HTTPS) plus the same threat-feed checks as above.
+4. **DNS-rebinding guard** at every webhook delivery attempt — the
+   destination hostname is re-resolved and re-checked against the
+   private-IP deny list. Catches TTL-0 rebinding attacks where a
+   webhook URL passed registration screening but now resolves to
+   `169.254.169.254` or similar.
+
+Threat-intelligence feeds refreshed hourly by an in-process reaper. No
+proprietary lock-in — all signals are on public feeds an acquirer or
+successor operator can continue consuming directly. Lawful basis for IP
+processing: UK GDPR Art. 6(1)(f) legitimate interests with documented
+LIA + Article 22 mitigation (every block response carries an
+appeal-email path).
+
+See the
+[AML Policy](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/AML_POLICY.md)
+§8a and the
+[RoPA — public summary](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/ROPA.md)
+§3.7 for the full controls and lawful-basis writeup.
 
 ## Regulatory position
 
