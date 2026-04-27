@@ -3,6 +3,13 @@ title: Changelog
 description: What shipped and when. Major releases, breaking changes, new chain support.
 ---
 
+## 2026-04-27
+
+- **7-chain adapter rollout** — Base, Solana, and Tempo chains added to all 23 adapter files: MPP adapter, AP2 adapter, 7 AI model adapters (OpenAI, Claude, Gemini, Bedrock, Cohere, xAI, Mistral), 9 AI framework adapters, and 4 no-code adapters (Zapier, Make, n8n, X). All adapters bumped to v1.1.0. 93/93 smoke checks pass.
+- **MCP Server v1.2.0** — 11 tools → 13 tools. Added `fetch_agent_card` and `send_a2a_message` for A2A agent discovery and payment-gated calls from inside Claude, Cursor, and Windsurf. Published to npm and PyPI.
+- **Tempo RPC** — configurable via `ALGOVOI_TEMPO_RPC` env var (Alchemy endpoint); Base uses `https://mainnet.base.org`; Solana uses `https://api.mainnet-beta.solana.com`.
+- **Protocol adapters** (MPP v2.3.0, AP2 v2.1.0) — full EVM (`eth_getTransactionReceipt`) and Solana (`getTransaction`) on-chain verification added for Base, Solana, and Tempo.
+
 ## 2026-04-25
 
 - **\$1,000 KYC-unlock free mainnet trial** replaces the prior rate-cap trial. Pass KYC and you get \$1,000 of free mainnet payments across all 7 chains, then 0.50% per payment.

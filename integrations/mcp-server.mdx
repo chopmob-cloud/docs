@@ -3,26 +3,62 @@ title: MCP server
 description: Expose AlgoVoi as MCP tools to Claude Desktop, Claude Code, Cursor, Windsurf, or any MCP-compatible assistant.
 ---
 
-The AlgoVoi MCP server lets any [Model Context Protocol](https://modelcontextprotocol.io) client call AlgoVoi's gateway as if its tools were native. An assistant can then create payment links, verify transactions, and check status as part of a normal conversation.
+The AlgoVoi MCP server (v1.2.0) lets any [Model Context Protocol](https://modelcontextprotocol.io) client call AlgoVoi's gateway as if its tools were native. An assistant can create payment links, verify transactions, check status, and now discover and call payment-gated A2A agents — all from a normal conversation.
 
-## What's exposed
+## 13 tools
+
+### Payment tools
 
 | Tool | Action |
 | --- | --- |
 | `create_checkout` | Generate a hosted-checkout URL from amount + currency + chain |
 | `verify_payment` | Confirm an on-chain transaction was paid for the given token |
 | `check_status` | Poll a checkout's lifecycle state |
-| `list_networks` | Return all supported chains and assets for a tenant |
+| `list_networks` | Return all supported chains and assets (all 7 chains) |
 | `list_resources` | List the tenant's defined paid resources |
+
+### Protocol challenge tools
+
+| Tool | Action |
+| --- | --- |
+| `generate_mpp_challenge` | Compose an IETF MPP 402 `WWW-Authenticate` header + challenge ID |
+| `verify_mpp_receipt` | Verify an MPP on-chain receipt via direct indexer (no API call) |
+| `verify_x402_proof` | Decode a base64 x402 proof and verify the transaction on-chain |
+| `generate_x402_challenge` | Compose an x402 v1 `X-Payment-Required` header |
+| `generate_ap2_mandate` | Compose an AP2 v0.1 `PaymentMandate` for agent payment flows |
+| `verify_ap2_payment` | Verify an AP2 mandate payment receipt via direct indexer |
+
+### A2A agent tools
+
+| Tool | Action |
+| --- | --- |
+| `fetch_agent_card` | `GET {agent_url}/.well-known/agent.json` — discover a payment-gated A2A agent's capabilities before calling it |
+| `send_a2a_message` | `POST {agent_url}/message:send` — call a payment-gated A2A agent; returns the task result on 200, or `challenge_headers` on 402 for pay-and-retry |
+
+#### A2A pay-and-call flow
+
+```
+1. fetch_agent_card("https://agent.example.com")
+   → see agent costs $0.01, accepts MPP on Algorand
+
+2. send_a2a_message(agent_url, "What is the price of ALGO?")
+   → payment_required: true, challenge_headers: {WWW-Authenticate: ...}
+
+3. generate_mpp_challenge(...)   ← use tool #6
+   → user pays on-chain
+
+4. send_a2a_message(agent_url, text, payment_proof="<proof>")
+   → task result returned
+```
 
 ## Two implementations
 
-| Implementation | When to pick it | Source |
+| Implementation | Install | Source |
 | --- | --- | --- |
-| **Python** | Easiest to extend, runs everywhere Python runs | [mcp-server/python](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/mcp-server/python) |
-| **TypeScript** | Best for Node-native deployments and Cloudflare Workers | [mcp-server/typescript](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/mcp-server/typescript) |
+| **Python** `algovoi-mcp` | `pip install algovoi-mcp` / `uvx algovoi-mcp` | [mcp-server/python](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/mcp-server/python) |
+| **TypeScript** `@algovoi/mcp-server` | `npx -y @algovoi/mcp-server` | [mcp-server/typescript](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/mcp-server/typescript) |
 
-Both expose the same tools and configuration. Functional behaviour is identical.
+Both expose the same 13 tools across all 7 chains. Functional behaviour is identical.
 
 ## Wiring it into Claude Desktop
 
@@ -36,8 +72,7 @@ Add the MCP server to your Claude Desktop config (`~/Library/Application Support
       "args": ["algovoi-mcp"],
       "env": {
         "ALGOVOI_API_KEY": "algv_…",
-        "ALGOVOI_TENANT_ID": "…",
-        "ALGOVOI_API_BASE": "https://api1.ilovechicken.co.uk"
+        "ALGOVOI_API_BASE": "https://cloud.algovoi.co.uk"
       }
     }
   }
@@ -52,7 +87,7 @@ Same shape as Claude Desktop. Each editor has its own MCP config location, but t
 
 ## A2A and MCP together
 
-The same gateway exposes [A2A skills](/protocols/a2a) for agent-to-agent calls and MCP tools for assistants. They're equivalent on the wire, just different protocols. If you're building agents, A2A is the discoverable shape; if you're augmenting an assistant, MCP is the natural fit.
+The same gateway exposes [A2A skills](/protocols/a2a) for agent-to-agent calls and MCP tools for assistants. Use `fetch_agent_card` + `send_a2a_message` to discover and call payment-gated A2A agents from inside Claude or Cursor — no separate client code required.
 
 ## See also
 

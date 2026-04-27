@@ -3,7 +3,7 @@ title: AI agent frameworks
 description: Payment-gate any agent, chain, tool, or workflow built with the framework you already use.
 ---
 
-Every adapter wraps your framework's normal call surface and inserts a `check()` step that returns an HTTP 402 challenge when payment is missing. The client pays on-chain, retries with proof, and the call goes through. Same shape across all 12 frameworks.
+Every adapter wraps your framework's normal call surface and inserts a `check()` step that returns an HTTP 402 challenge when payment is missing. The client pays on-chain, retries with proof, and the call goes through. Same shape across all 13 frameworks.
 
 ## Available adapters
 
@@ -58,6 +58,10 @@ Each adapter supports x402, MPP, and AP2 on the same code path. Pick the one tha
 
 See the protocol pages for detail: [x402](/protocols/x402), [MPP](/protocols/mpp), [AP2](/protocols/ap2).
 
+## Chains
+
+All 13 framework adapters support all 7 chains: Algorand, VOI, Hedera, Stellar, Base, Solana, and Tempo. Pass the network key when constructing the adapter (e.g. `network="base-mainnet"`).
+
 ## Versioning
 
-All adapters track v1.0.0 of the shared client surface. Behaviour and method names are identical across frameworks; only the wrapping layer changes. If you switch frameworks you keep the same AlgoVoi configuration.
+All adapters are at v1.1.0 of the shared client surface. Behaviour and method names are identical across frameworks; only the wrapping layer changes. If you switch frameworks you keep the same AlgoVoi configuration.

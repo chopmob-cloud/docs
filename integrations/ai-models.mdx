@@ -42,6 +42,10 @@ response = await adapter.chat.completions.create(
 
 If `resource_id` doesn't have a paid `Payment Credential` available on the request, the call returns an HTTP 402 with the challenge JSON. The client pays, retries, and the call forwards to OpenAI.
 
+## Chains
+
+All 7 model adapters support all 7 chains: Algorand, VOI, Hedera, Stellar, Base, Solana, and Tempo (v1.1.0). Pass the network key when constructing the adapter (e.g. `network="base-mainnet"`).
+
 ## When to use these vs the framework adapters
 
 - Use **model adapters** when you're calling the foundation-model SDK directly and want a paywall in front of it.
