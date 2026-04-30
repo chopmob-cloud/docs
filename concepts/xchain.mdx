@@ -1,0 +1,115 @@
+---
+title: xChain payments
+description: Let MetaMask users pay Algorand checkouts directly — no Algorand wallet required. Powered by xchain-accounts ECDSA LogicSig and Allbridge Core.
+---
+
+xChain is a payment flow that lets any holder of an EVM wallet (MetaMask, Coinbase Wallet, Rabby, etc.) pay an AlgoVoi Algorand checkout without ever installing an Algorand wallet or learning about ASAs.
+
+It is available automatically on every Algorand mainnet hosted-checkout page. No adapter changes are needed — the xChain tab appears alongside the standard QR and wallet flows.
+
+---
+
+## How it works
+
+Every EVM address maps deterministically to an Algorand LogicSig address. The LogicSig is a smart contract that accepts a transaction if and only if the attached argument is a valid EIP-712 signature from the matching EVM private key. This means MetaMask can directly authorise Algorand transactions — no bridge, no swap, no Algorand account needed in the customer's wallet.
+
+AlgoVoi's checkout page handles the full flow in-browser:
+
+```
+Customer opens checkout → clicks "xChain" tab
+       ↓
+MetaMask connect → EVM address detected
+       ↓
+Gateway derives deterministic Algorand address from EVM address
+       ↓
+Gateway checks USDCa balance at that Algorand address
+       ↓
+  ┌─ Already funded ──────────────────────────────────────────┐
+  │  Build unsigned Algorand ASA transfer                     │
+  │  Present EIP-712 message in MetaMask                      │
+  │  Customer signs → gateway submits LogicSig transaction    │
+  │  Confirmed on Algorand in ~5 seconds                      │
+  └───────────────────────────────────────────────────────────┘
+       ↓  (if not funded — bridge path)
+  ┌─ Needs funding ───────────────────────────────────────────┐
+  │  Customer selects source chain (ETH / Base / ARB / etc.)  │
+  │  Approve USDC spend in MetaMask                           │
+  │  MetaMask calls swapAndBridge on Allbridge contract       │
+  │  Allbridge delivers USDCa to the Algorand address (~2 min)│
+  │  Checkout auto-detects arrival → proceeds to sign + submit│
+  └───────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Supported bridge sources
+
+When the customer needs to fund their Algorand LogicSig address, they can bridge from any of these chains via [Allbridge Core](https://allbridge.io):
+
+| Chain | EVM chain ID | Token bridged |
+|---|---|---|
+| Ethereum | 1 | USDC |
+| Base | 8453 | USDC |
+| Arbitrum | 42161 | USDC |
+| Optimism | 10 | USDC |
+| Polygon | 137 | USDC |
+| BNB Chain | 56 | USDC |
+| Avalanche | 43114 | USDC |
+
+All transfers arrive as native USDCa (ASA `31566704`) on Algorand mainnet. The Allbridge fee (~0.3%) is built into the bridge amount — the merchant receives the exact checkout amount; the customer pays the fee on top.
+
+---
+
+## Transfer times
+
+| Path | Typical end-to-end |
+|---|---|
+| Direct (USDCa already in LogicSig address) | ~5 seconds |
+| Bridge path (Allbridge) | ~2–4 minutes |
+
+The hosted checkout page holds the customer through the entire bridge wait — it polls for Allbridge completion before redirecting. Platform adapters and webhooks are unaffected by the extra latency.
+
+---
+
+## First-time setup: opt-in sponsoring
+
+If the customer's Algorand LogicSig address has never been used (no ALGO, not opted in to USDCa), AlgoVoi's sponsor wallet tops it up with enough ALGO for the minimum balance and ASA opt-in (0.202 ALGO). The customer signs an EIP-712 message to authorise the opt-in transaction — still inside MetaMask, no Algorand wallet involved.
+
+Sponsoring requires `XCHAIN_ALGO_SPONSOR_MNEMONIC` to be set in the gateway environment. If not configured, first-time opt-ins return a 503 and the customer must pre-fund their LogicSig address manually.
+
+---
+
+## Merchant requirements
+
+**No action required** for existing tenants. xChain activates automatically for any tenant whose preferred network is `algorand_mainnet`. There are no new credentials, no webhook changes, and no adapter updates.
+
+The payout address configured for the tenant receives USDCa in the normal way — from the customer's LogicSig address, via a standard Algorand ASA transfer, verified by the AlgoVoi facilitator exactly like any other Algorand payment.
+
+---
+
+## Technical notes
+
+The LogicSig contract is an AVM v11 program that:
+
+1. Reconstructs the EIP-712 typed-data hash of the Algorand transaction ID
+2. Recovers the signer public key from the secp256k1 signature
+3. Derives the EVM address from the recovered key (`keccak256(pubkey)[12:]`)
+4. Asserts it equals the hardcoded owner address
+
+Source: [chopmob-cloud/xchain-accounts](https://github.com/chopmob-cloud/xchain-accounts)
+
+---
+
+## Limitations
+
+- **Algorand mainnet only.** xChain is not available on VOI, Hedera, Stellar, Base, Solana, Tempo, or any testnet.
+- **USDCa only.** Native ALGO payments via LogicSig are not supported in the current implementation.
+- **MetaMask (or any injected `window.ethereum` provider).** WalletConnect is not supported.
+
+---
+
+## See also
+
+- [Algorand](/chains/algorand) — chain reference, memo binding, payout address requirements
+- [Payment links](/concepts/payment-links) — how checkout links are created and managed
+- [Wormhole integration](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/wormhole.md) — alternative bridge path (Wormhole NTT, manual redeem, longer latency)

@@ -44,7 +44,18 @@ For programmatic settlement (running a server-side wallet that sweeps incoming p
 
 Algorand supports rekeying: an address can hand control to a different signer without changing the address. AlgoVoi's facilitator does not require this, but it's available if you want to delegate signing for high-volume tenants.
 
+## xChain — MetaMask payments
+
+Algorand mainnet checkouts support **xChain**: MetaMask users on any EVM chain can pay without an Algorand wallet. Their EVM address maps to a deterministic Algorand LogicSig address; they sign an EIP-712 message in MetaMask to authorise the Algorand transaction. If they need to fund the address first, Allbridge Core bridges USDC from Ethereum, Base, Arbitrum, Optimism, Polygon, BNB Chain, or Avalanche in ~2–4 minutes.
+
+No merchant action is required — the xChain tab appears automatically on every Algorand mainnet hosted-checkout page.
+
+[Full xChain documentation →](/concepts/xchain)
+
+---
+
 ## See also
 
+- [xChain payments](/concepts/xchain) — MetaMask → Algorand via ECDSA LogicSig and Allbridge bridge
 - [VOI](/chains/voi) is a fork-and-go cousin with the same SDKs and a different fee model.
 - [Quickstart](/quickstart) uses Algorand testnet as the default first integration.
