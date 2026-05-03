@@ -75,6 +75,7 @@
             "group": "Help",
             "pages": [
               "support",
+              "security",
               "incident-protocol",
               "compliance",
               "changelog",

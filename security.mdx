@@ -1,0 +1,259 @@
+---
+title: "Security"
+description: "How AlgoVoi protects merchants, payers, regulators, and the audit trail. Concrete, verifiable claims — no marketing fluff."
+---
+
+This page is written for security teams, procurement reviewers, auditors, and anyone evaluating whether AlgoVoi is safe to put behind their checkout, AI agent, or marketplace. Every claim below is concrete and backed by source-pointer evidence.
+
+For developers, the protocol pages and the [Compliance overview](/compliance) are likely a better starting point.
+
+For the full Information Security Policy and ICT Risk Management Framework (1,195 lines covering SOC 2 CC1–CC9, DORA Articles 5–11, full risk register, incident runbooks, and BCP playbooks), [request the NDA-tier document](mailto:security@algovoi.co.uk?subject=Information+Security+Policy+request).
+
+## At a glance
+
+<CardGroup cols={2}>
+  <Card title="Compliance as an enabler" icon="shield-check">
+    KYC, KYB, MLRO sign-off, AML monitoring, sanctions screening, and Fernet
+    at-rest encryption shipped — not a roadmap. Your CFO signs off, your
+    auditor doesn't have to ask twice.
+  </Card>
+  <Card title="Hash-chained audit log" icon="link">
+    Every audit event, sanctions hit, and compliance event is SHA-256
+    hash-chained at insert time. Tampering breaks a verifiable property
+    detected at export. RFC 8785 canonical JSON.
+  </Card>
+  <Card title="Object Lock retention" icon="lock">
+    Every audit batch is shipped to S3-compatible Object Lock storage in
+    COMPLIANCE mode with 7-year retention. Even the bucket owner cannot
+    delete or overwrite for the retention period.
+  </Card>
+  <Card title="Two-key encryption separation" icon="key">
+    Special-category personal data (KYB documents) and operational secrets
+    (HMAC, OAuth, MFA seeds) are encrypted with separate Fernet keys.
+    Production startup refuses to start if the keys are equal.
+  </Card>
+  <Card title="UK-registered, FCA-aware" icon="building-columns">
+    UK Limited operating entity. Information Security Policy aligned to
+    UK Money Laundering Regulations 2017, UK GDPR, SAMLA 2018, and the
+    DORA / MiCA framework for EU customer expansion.
+  </Card>
+  <Card title="Cloudflare-only origin" icon="cloud">
+    VM1 firewall is a strict allowlist of Cloudflare IP ranges scoped to
+    the public interface. 225,000+ direct-IP probe attempts blocked since
+    enforcement landed. Verifiable in our incident logs.
+  </Card>
+</CardGroup>
+
+## Encryption
+
+### In transit
+
+- **TLS 1.3 everywhere.** All public traffic terminates at Cloudflare with TLS 1.3 enforced. AlgoVoi nginx accepts only TLS 1.3 + 1.2 with modern ciphers.
+- **Cloudflare-only origin.** VM1 enforces Cloudflare IP allowlist via `iptables` rules scoped to the public network interface. Direct-IP bypass attempts are dropped silently at the firewall — no TCP handshake completes.
+- **Inter-VM private routing.** VM1 ↔ VM3 traffic traverses Vultr's private VPC (`10.8.96.0/20`). Public-internet traversal between VMs is limited to encrypted SSH for backup transfer; WireGuard mesh planned to remove that hop.
+
+### At rest
+
+- **Two-key separation.** Tenant secrets (HMAC keys, OAuth tokens, MFA TOTP seeds, webhook secrets) use one Fernet key. Special-category personal data — KYB documents, beneficial-owner identity scans, KYC selfies — uses a **completely separate** Fernet key. Production validation refuses application startup if the keys are equal or unset.
+- **MultiFernet rotation.** Both keys support zero-downtime rotation via a fallback-key slot. Documented procedures in the Information Security Policy.
+- **Magic-prefix forward compatibility.** KYB document files on disk carry an `AVK1` 4-byte prefix so the loader can transparently distinguish encrypted files from any legacy plaintext, and so future encryption schemes (AVK2, AVK3) can ship with backward-compatible decryption.
+- **Path-traversal hardening.** All file-system access through KYB storage routes through a `_safe_path()` guard that rejects null bytes and any path attempting to escape the documents root.
+
+## Audit trail and tamper-evidence
+
+This is where AlgoVoi differs from every other crypto-payments stack we've seen. **Three layers of defence**, not one.
+
+### Layer 1 — write-once at the database
+
+Three Postgres tables — `audit_log`, `screening_hits`, and `compliance_events` — are protected by Postgres `RULE` directives that block `UPDATE` and `DELETE` at the SQL level. The application can only `INSERT`.
+
+### Layer 2 — cryptographic hash chain
+
+Every row inserted into the three protected tables also stores a `chain_position`, a `content_hash` (SHA-256 of the row's RFC 8785 canonical-JSON content), and a `prev_hash` linking to the previous row's `content_hash`. Genesis row uses `0` × 64. Inserts are serialised by Postgres advisory lock so concurrent writers cannot fork the chain.
+
+Tampering (UPDATE of an inserted row, DELETE of a row, INSERT of a forged row out of band) breaks a verifiable property. We expose three verify endpoints under admin scope:
+
+- `GET /internal/audit-log/verify-chain`
+- `GET /internal/compliance/screening-hits/verify-chain`
+- `GET /internal/compliance/compliance-events/verify-chain`
+
+Each returns `chain_intact: true|false` plus, if broken, the exact `chain_position` of the break and a human-readable failure reason. SOC 2 auditors and FCA examiners can run these endpoints under audit credentials any time.
+
+### Layer 3 — off-VM Object Lock with COMPLIANCE retention
+
+Every batch of new chained rows is exported as immutable NDJSON to S3-compatible Object Lock storage with `ObjectLockMode=COMPLIANCE` and a 7-year retention period. **Even the bucket owner with full IAM permissions cannot delete or overwrite the object before retention expires.**
+
+The retention period (7 years) is configured per-object at upload and exceeds the UK MLR 2017 Reg 40(3) statutory minimum (5 years) and the FCA SYSC requirement.
+
+A 5-minute reaper sweeps for un-shipped chained rows, batches them, computes the batch SHA-256, and uploads each batch with the position range and SHA encoded into the object key. An external auditor can fetch the NDJSON files, recompute hashes, and reconcile against in-DB rows. If the in-DB rows have been tampered with or even fully deleted, the Object Lock copy is the source of truth.
+
+<Note>
+**What this means for an auditor:** the SOC 2 / FCA evidence ask "demonstrate that audit log entries cannot be tampered with after creation" has a three-layer answer that holds up under technical scrutiny — Postgres RULE, hash chain, off-VM immutable copy. We can demonstrate each layer with a working endpoint or bucket inventory in the auditor's presence.
+</Note>
+
+## Sanctions screening (SAMLA 2018, UK MLR 2017, OFAC)
+
+- **Local cache, daily refresh.** Sanctions list data from OFSI (UK), OFAC (US), and the EU consolidated list is refreshed daily into a local Postgres cache. No third-party API call sits on the payment hot path.
+- **Indexed lookup, sub-3ms.** `screen_wallet()` performs an indexed `wallet_address_normalised` lookup. Returns hit/clear plus a server-side action (`blocked` / `flagged` / `escalated`).
+- **Tipping-off prevention.** Per SAMLA 2018 s.20, the gateway and facilitator only ever receive a boolean hit/clear result. The list source, entity name, and match metadata are confined to the compliance admin namespace and the MLRO review queue.
+- **Multiple screening points.** Wallets are screened in real time at challenge issuance and verification, plus at tenant onboarding (KYB approval), plus at risk-tier change, plus by a daily background sweep that catches wallets which became sanctioned after their last screening.
+- **Write-once hit records.** `ScreeningHit` rows are protected by the same three-layer audit defence as audit_log: Postgres RULE, hash chain, Object Lock shipping.
+
+## Access control
+
+### Tenant API authentication
+
+- API keys hashed with **Argon2id** (resistant to GPU brute-force).
+- Plaintext returned once at issuance, never persisted.
+- Key states: `active`, `grace`, `revoked`, `suspended`. Grace-period rotation supports zero-downtime replacement.
+- Per-tenant rate limits enforced at nginx and the application layer.
+- Generic `401 Unauthorized` on all auth failure — no internal detail leaks.
+
+### Admin authentication
+
+- Bearer tokens hashed with SHA-256, stored in a database table with O(1) lookup via a key-id alias plus a timing-safe full-hash comparison (`hmac.compare_digest`).
+- Token expiry enforced per-key.
+- **TOTP MFA mandatory** for the admin dashboard, with a tight clock-drift window.
+- Scope-restricted access via a `require_scope()` dependency. Current scopes include `audit:read`, `compliance:read`, `compliance:admin`, `tenants:read`, `tenants:write`, `apikeys:admin`, `payouts:read`, `payouts:write`, `disputes:write`, `kyb:write`, `subscriptions:admin`.
+- In-process auth-outcome counters surface authentication health to the operator without an external metrics dependency.
+
+### Webhook signing
+
+- Stripe-style HMAC-SHA256 signing on every outbound webhook delivery.
+- Per-destination secret, Fernet-encrypted at rest.
+- `X-AlgoVoi-Signature: t=<timestamp>,v1=<sig>` header pattern customers' code can verify in any language.
+- Retry queue with 30s → 32h escalating backoff and dead-letter capture (`FOR UPDATE SKIP LOCKED` for multi-replica safety).
+
+## Compliance posture
+
+| Standard | Applicability | Status |
+|---|---|---|
+| **UK Money Laundering Regulations 2017** | UK-registered crypto-asset service provider | Compliant: KYC, KYB, sanctions screening, transaction monitoring, MLRO, audit retention |
+| **UK GDPR / DPA 2018** | All UK personal data | Lawful bases documented, subject rights operational, DPIA + ROPA scheduled Q3 2026 |
+| **SAMLA 2018** | UK financial sanctions | Compliant: tipping-off prevention enforced, OFSI feed daily refresh, write-once hit log |
+| **DORA (EU 2022/2554)** | Applicable on MiCA CASP authorisation | Information Security Policy v1.0 published 2026-05-03, mapped to DORA Articles 5–11 |
+| **MiCA (EU 2023/1114)** | When EU-resident customers are onboarded | Authorisation tracked separately; no active solicitation of EU customers prior to authorisation |
+| **SOC 2 Trust Services Criteria** | Customer-required for enterprise B2B | Information Security Policy mapped to CC1–CC9; SOC 2 Type II audit scheduled subject to ≥5 paying-tenants milestone |
+| **PCI DSS** | Triggered if card data is processed | Not applicable — AlgoVoi is crypto-only |
+| **ISO/IEC 27001** | Optional certification | Roadmap item Q4 2026 if customer demand drives it |
+
+## Vulnerability management
+
+- **Patching cadence:** OS critical patches within 7 days, Important within 30. Application dependency patches: confirmed CVEs in our usage path within 7 days, otherwise within 30.
+- **Dependency scanning:** GitHub Dependabot enabled across `chopmob-cloud/platform` and `chopmob-cloud/AlgoVoi`. Weekly automated scan, monthly manual review.
+- **Pinned versions:** Python and Node dependencies pinned at minor version in `pyproject.toml` / `package.json`.
+- **Penetration testing:** annual external pentest scheduled for Q4 2026 alongside the first-paying-tenants milestone. Internal lightweight quarterly OWASP Top 10 + STRIDE walkthrough until then.
+- **Software Bill of Materials:** CycloneDX SBOM generated per release tag. First public SBOM ships with this trust page.
+
+## Incident response
+
+- **Classification:** P0 (catastrophic — fund loss, key compromise, sanctions failure) — immediate 24/7 response, founder ack within 15 min. P1 (severe service degradation) — 4h business-day SLA. P2 / P3 — documented business-day SLAs.
+- **Regulator notification:** UK ICO within 72 hours for personal-data breaches per UK GDPR Art. 33. NCA SARonline within 30 days statutory for AML implications. Affected data subjects per Art. 34 timing.
+- **Customer notification:** Affected tenant(s) within 1 hour of P0/P1 confirmation via email + dashboard banner. Material outage = status-page banner + all-tenant email within 1 hour.
+- **Post-incident review:** Within 5 working days for every P0/P1, written timeline + root cause + action items + risk-register update + policy update if controls need strengthening.
+- **Per-scenario runbooks:** 8 documented incident runbooks in the Information Security Policy (admin-key compromise, encryption-key compromise, sanctions failure, KYB document leak, VM full host failure, Cloudflare account compromise, audit-log integrity break, smart-contract bug).
+
+## Business continuity and disaster recovery
+
+| Service | RPO (data loss) | RTO (downtime) |
+|---|---|---|
+| Payment processing (gateway) | 0 | 1 hour |
+| Control plane | 0 | 1 hour |
+| Facilitator | 0 | 1 hour |
+| Postgres | 24 hours | 4 hours |
+| KYB documents | 24 hours | 4 hours |
+| Sanctions cache | 24 hours | 1 hour |
+| Audit log + chain | 0 (hash chain detects loss) | 4 hours |
+
+Daily encrypted Postgres dumps + KYB-doc rsync to a secondary VM. Weekly automated restore-test on the secondary. First annual tabletop exercise scheduled 2026-08-03; 9 documented BCP playbooks for specific failure modes.
+
+## Vendor and supplier risk
+
+ICT suppliers in scope are categorised T1 (critical — outage = platform outage, requires SOC 2 report on file), T2 (important), or T3 (routine). Inventory of 13 current suppliers tracked with onboarding date, last review date, next review date, and a documented termination plan for every T1.
+
+T1 suppliers: Vultr (compute + Object Storage), Cloudflare (edge + WAF + DNS + TLS), GitHub (source control). Each has a signed Data Processing Agreement.
+
+## Coordinated vulnerability disclosure
+
+We welcome responsible security research. Contact details and policy live in the standard `security.txt` location:
+
+- **Machine-readable:** [`api1.ilovechicken.co.uk/.well-known/security.txt`](https://api1.ilovechicken.co.uk/.well-known/security.txt)
+- **Email:** [`security@algovoi.co.uk`](mailto:security@algovoi.co.uk)
+- **PGP key:** Available on request from `security@algovoi.co.uk`. Will be published alongside this page once a stable rotation cadence is established.
+
+When reporting, please include enough detail to reproduce the issue. We commit to acknowledging receipt within 2 business days, providing a triage classification within 5 business days, and a remediation timeline appropriate to severity. We will not pursue legal action against good-faith researchers who follow our coordinated-disclosure policy.
+
+## Frequently asked questions
+
+<AccordionGroup>
+  <Accordion title="Are you SOC 2 audited?">
+    Not yet. SOC 2 Type II audit is scheduled subject to the first-paying-tenants
+    milestone. The Information Security Policy is mapped to SOC 2 CC1–CC9 today,
+    so a Type II audit is a fieldwork exercise rather than a controls-design
+    exercise. Available on signed NDA for prospects who want to assess the
+    controls in advance.
+  </Accordion>
+  <Accordion title="Where is data stored?">
+    All production data is stored on Vultr Cloud Compute infrastructure in EU /
+    US regions. Vultr operates SOC 2 Type II audited datacentres. KYB documents
+    and operational secrets are application-layer encrypted before disk write
+    using two separate Fernet keys (see Encryption section). Daily encrypted
+    backups to a secondary Vultr instance.
+  </Accordion>
+  <Accordion title="What happens to my data if I close my account?">
+    Tenants can request deletion via the dashboard. Deletion routes through
+    `gdpr_purge_service` which removes the tenant record and all linked
+    operational data. **Exception:** records under AML hold (KYB documents,
+    transaction logs, audit log, screening hits) are retained for the
+    statutory minimum of 5 years per UK MLR 2017 Reg 40(3), as required by
+    law. After the retention period expires, AML-hold records are purged
+    automatically.
+  </Accordion>
+  <Accordion title="Can I get a copy of my data?">
+    Yes. Tenants can export their full data record via a GDPR data-export
+    request. Currently a manual operator process; self-service export
+    endpoint is on the Q3 2026 roadmap.
+  </Accordion>
+  <Accordion title="Do you have a bug bounty programme?">
+    Not yet. We accept coordinated disclosure via security@algovoi.co.uk and
+    follow the policy in our security.txt. A formal paid bug bounty is on
+    the roadmap once the platform crosses material revenue scale.
+  </Accordion>
+  <Accordion title="What about smart-contract security?">
+    Two on-chain components are in production: the Solana Pay reference-binding
+    flow (uses the standard Solana Pay primitive — no custom contract) and the
+    xChain LogicSig on Algorand (custom AVM v11 contract at
+    `chopmob-cloud/xchain-accounts`, internally peer-reviewed, external audit
+    scheduled before xChain expands beyond Algorand mainnet).
+  </Accordion>
+  <Accordion title="Do you operate any custodial wallets?">
+    No. Settlement is direct customer-wallet → merchant-wallet on the public
+    blockchain. AlgoVoi never holds, controls, or transmits customer or
+    merchant funds. The xChain feature uses a deterministic LogicSig address
+    derived from the customer's existing EVM wallet — the customer signs an
+    EIP-712 message in their own wallet to authorise each transfer.
+  </Accordion>
+  <Accordion title="What if you go out of business?">
+    The non-custodial model means there are no customer funds at risk if
+    AlgoVoi shuts down. KYB documents and audit records remain in
+    customer-readable form for the statutory retention period via the off-VM
+    Object Lock storage which is independently accessible. Documented
+    business-continuity exit plan in the Information Security Policy on
+    request.
+  </Accordion>
+</AccordionGroup>
+
+## Request additional documentation
+
+For procurement, vendor security review, or audit fieldwork:
+
+- [`security@algovoi.co.uk`](mailto:security@algovoi.co.uk?subject=Vendor+Security+Review) — vendor security questionnaires answered within 5 business days
+- Information Security Policy (1,195 lines, full risk register + incident runbooks + BCP playbooks) — available on signed NDA
+- Latest annual penetration test report — available on signed NDA once first test completes (Q4 2026)
+- Latest SOC 2 report — when published
+
+## Document changelog
+
+| Date | Change |
+|---|---|
+| 2026-05-03 | Initial publication. Hash-chained audit log and Object Lock shipping marked live. VM1 firewall enforcement marked live. Information Security Policy v1.0 referenced. |
