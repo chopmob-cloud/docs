@@ -7,7 +7,9 @@ This page is written for security teams, procurement reviewers, auditors, and an
 
 For developers, the protocol pages and the [Compliance overview](/compliance) are likely a better starting point.
 
-For the full Information Security Policy and ICT Risk Management Framework (1,195 lines covering SOC 2 CC1–CC9, DORA Articles 5–11, full risk register, incident runbooks, and BCP playbooks), [request the NDA-tier document](mailto:security@algovoi.co.uk?subject=Information+Security+Policy+request).
+The **canonical compliance hub** lives at [`algovoi.co.uk/compliance.html`](https://algovoi.co.uk/compliance.html) — status-badge dashboard, regulatory scope table, AML/CTF programme detail, server-by-server security ratings, and the full policy library.
+
+The full Information Security Policy & ICT Risk Management Framework (v2.0, 1,239 lines covering SOC 2 CC1–CC9, DORA Articles 5–11, the Top-15 risk register, 8 incident runbooks, 9 BCP playbooks, and the exception register) is **fully public** at [`chopmob-cloud/AlgoVoi-Platform-Adapters/compliance/INFORMATION_SECURITY_POLICY.md`](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/INFORMATION_SECURITY_POLICY.md). Tier B documents (BWRA full text, CDD/EDD full text, RoPA full text, transaction-monitoring rule values, pen-test report when produced, SOC 2 evidence package as it builds) remain available on signed NDA — [request via `security@algovoi.co.uk`](mailto:security@algovoi.co.uk?subject=DD+Pack+Request).
 
 ## At a glance
 
@@ -187,11 +189,12 @@ When reporting, please include enough detail to reproduce the issue. We commit t
 
 <AccordionGroup>
   <Accordion title="Are you SOC 2 audited?">
-    Not yet. SOC 2 Type II audit is scheduled subject to the first-paying-tenants
-    milestone. The Information Security Policy is mapped to SOC 2 CC1–CC9 today,
-    so a Type II audit is a fieldwork exercise rather than a controls-design
-    exercise. Available on signed NDA for prospects who want to assess the
-    controls in advance.
+    Not yet. **SOC 2 Type I targeted Q2 2027; Type II targeted Q4 2027.** The
+    Information Security Policy v2.0 is mapped to SOC 2 Common Criteria CC1–CC9
+    today, so the audit is a fieldwork exercise rather than a controls-design
+    exercise. The full policy is publicly published in the
+    [`AlgoVoi-Platform-Adapters/compliance/`](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/compliance)
+    repository — anyone can review the controls today.
   </Accordion>
   <Accordion title="Where is data stored?">
     All production data is stored on Vultr Cloud Compute infrastructure in EU /
@@ -248,7 +251,8 @@ When reporting, please include enough detail to reproduce the issue. We commit t
 For procurement, vendor security review, or audit fieldwork:
 
 - [`security@algovoi.co.uk`](mailto:security@algovoi.co.uk?subject=Vendor+Security+Review) — vendor security questionnaires answered within 5 business days
-- Information Security Policy (1,195 lines, full risk register + incident runbooks + BCP playbooks) — available on signed NDA
+- **Information Security Policy v2.0** (1,239 lines, SOC 2 CC1–CC9, DORA Arts 5–11, full risk register, 8 incident runbooks, 9 BCP playbooks, exception register) — **fully public** at [`AlgoVoi-Platform-Adapters/compliance/INFORMATION_SECURITY_POLICY.md`](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/INFORMATION_SECURITY_POLICY.md)
+- **Tier B documents** (BWRA full text, CDD/EDD full text, RoPA full text, transaction-monitoring rule values, customer risk-scoring matrix full) — public summary in the same repo, full document on signed NDA
 - Latest annual penetration test report — available on signed NDA once first test completes (Q4 2026)
 - Latest SOC 2 report — when published
 
@@ -256,4 +260,5 @@ For procurement, vendor security review, or audit fieldwork:
 
 | Date | Change |
 |---|---|
-| 2026-05-03 | Initial publication. Hash-chained audit log and Object Lock shipping marked live. VM1 firewall enforcement marked live. Information Security Policy v1.0 referenced. |
+| 2026-05-03 (rev 2) | Reconciled with the canonical compliance hub at `algovoi.co.uk/compliance.html`. Information Security Policy upgraded to v2.0 (1,239 lines) and reframed as fully-public rather than NDA-tier. Tier B document policy (NDA-only) clarified. SOC 2 dates aligned to public roadmap (Type I Q2 2027, Type II Q4 2027). |
+| 2026-05-03 | Initial publication. Hash-chained audit log and Object Lock shipping marked live. VM1 firewall enforcement marked live. |
