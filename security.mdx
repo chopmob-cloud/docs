@@ -51,8 +51,9 @@ The full Information Security Policy & ICT Risk Management Framework (v2.0, 1,23
 ### In transit
 
 - **TLS 1.3 everywhere.** All public traffic terminates at Cloudflare with TLS 1.3 enforced. AlgoVoi nginx accepts only TLS 1.3 + 1.2 with modern ciphers.
-- **Cloudflare-only origin.** VM1 enforces Cloudflare IP allowlist via `iptables` rules scoped to the public network interface. Direct-IP bypass attempts are dropped silently at the firewall — no TCP handshake completes.
-- **Inter-VM private routing.** VM1 ↔ VM3 traffic traverses Vultr's private VPC (`10.8.96.0/20`). Public-internet traversal between VMs is limited to encrypted SSH for backup transfer; WireGuard mesh planned to remove that hop.
+- **Cloudflare-only origin.** VM1 + VM4 enforce Cloudflare IP allowlist via `iptables` rules scoped to the public network interface. Direct-IP bypass attempts are dropped silently at the firewall — no TCP handshake completes.
+- **Database TLS.** Postgres on both production database hosts (VM1 + VM3) enforces `ssl_min_protocol_version = TLSv1.3` with `ssl_prefer_server_ciphers = on`. Same-host Docker-bridge connections continue without TLS for negligible CPU overhead on loopback-equivalent traffic; any non-bridge / non-loopback source MUST use TLS via `hostssl scram-sha-256` with a `hostnossl reject` belt rule against config drift. Self-signed CA (4096-bit RSA, valid 2026 → 2036) issues per-server certs (2048-bit RSA, valid 2026 → 2028). CA private key kept offline.
+- **Inter-VM private routing.** All control-plane / facilitator / KYB-verif / bot traffic between VM1, VM3, and VM4 traverses Vultr's private VPC (`10.8.96.0/20`) with sub-1ms RTT. No inter-VM control traffic crosses the public internet.
 
 ### At rest
 
@@ -260,5 +261,6 @@ For procurement, vendor security review, or audit fieldwork:
 
 | Date | Change |
 |---|---|
+| 2026-05-03 (rev 3) | Postgres TLS in-transit deployed on VM1 (Postgres 17.9) + VM3 (Postgres 16.13). VM2 → VM4 migration completed: secondary facilitator + KYB-verif + Twitter bot now live on UK-region VPC-attached host (`10.8.96.5`); inter-VM control traffic routes over private VPC, sub-1ms RTT. KYB sanctions screening pipeline activated end-to-end on VM1 control plane (was a silent no-op pre-migration). |
 | 2026-05-03 (rev 2) | Reconciled with the canonical compliance hub at `algovoi.co.uk/compliance.html`. Information Security Policy upgraded to v2.0 (1,239 lines) and reframed as fully-public rather than NDA-tier. Tier B document policy (NDA-only) clarified. SOC 2 dates aligned to public roadmap (Type I Q2 2027, Type II Q4 2027). |
 | 2026-05-03 | Initial publication. Hash-chained audit log and Object Lock shipping marked live. VM1 firewall enforcement marked live. |
