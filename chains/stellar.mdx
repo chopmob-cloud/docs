@@ -41,7 +41,21 @@ Stellar's `path_payment` and `fee_bump_transaction` operations are supported by 
 - [Freighter](https://freighter.app) (browser extension)
 - [Solar Wallet](https://solarwallet.io)
 
+## xChain — pay from MetaMask, settle on Stellar (in development)
+
+Stellar xChain is queued for the next sprint. Once shipped, tenants on `stellar_mainnet` will get the xChain tab on every hosted checkout, letting customers holding USDC on EVM chains pay a Stellar checkout from MetaMask without installing a Stellar wallet.
+
+Two routing protocols planned:
+
+- **Allbridge Core** (live mainnet today) — delivers Soroban-wrapped USDC at contract `CCW67TSZ…`. Requires a Soroban-aware merchant wallet (Lobstr / Freighter / Hot / Albedo). ~90-120s.
+- **Circle CCTP V2** (testnet today, mainnet on Circle's 2026 roadmap) — will deliver classic Stellar USDC via Circle's `mint_and_forward` Soroban contract once Circle ships mainnet. ~50-90s, zero slippage.
+
+Both protocols share the same xChain attempts pipeline; the merchant sets `xchain_destination_chain = 'stellar'` and a Stellar payout address (`G…` account or `C…` Soroban contract), and AlgoVoi picks the right bridge protocol per attempt.
+
+See [xChain payments](/concepts/xchain) for the unified flow.
+
 ## See also
 
 - [x402 protocol](/protocols/x402) for the payment protocol layer
 - [Concept: chains overview](/concepts/chains-overview) for cross-chain comparison
+- [xChain payments](/concepts/xchain) — pay Stellar checkouts from MetaMask (in development)

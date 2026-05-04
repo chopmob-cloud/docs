@@ -42,9 +42,13 @@ Like SPL tokens generally, USDC requires an **associated token account** (ATA) o
 
 ## xChain — pay from MetaMask, settle on Solana
 
-Tenants on `solana_mainnet` automatically get the xChain tab on every hosted checkout. A customer holding USDC on any of seven EVM chains (Ethereum, Base, Arbitrum, Optimism, Polygon, BNB, Avalanche) can pay the Solana checkout from MetaMask without installing Phantom or any other Solana wallet — Allbridge Core bridges the USDC and delivers canonical Circle USDC directly to the merchant's Solana payout address.
+Tenants on `solana_mainnet` automatically get the xChain tab on every hosted checkout. A customer holding USDC on any of seven EVM chains (Ethereum, Base, Arbitrum, Optimism, Polygon, BNB, Avalanche) can pay the Solana checkout from MetaMask without installing Phantom or any other Solana wallet.
 
-Typical bridge time: 90–120 seconds. The merchant sees a normal Solana payment land at their payout wallet; the AlgoVoi facilitator's standard SolanaVerifier confirms the destination transaction the same way it confirms direct Solana Pay payments. No extra integration work for the merchant.
+**Default routing: Circle CCTP V2 Fast Transfer.** End-to-end ~50-90s (~30s source-tx confirmation + ~30s Iris attestation + ~5-10s relayer claim). Zero pool slippage — the customer pays the bridge amount and the merchant receives it minus only Circle's small Fast Transfer fee (capped at 14 bps), absorbed by AlgoVoi's slippage tolerance.
+
+Allbridge Core is available as a fallback for any source chain CCTP doesn't support (e.g. BNB Chain) — ~90-120s, ~0.3% combined pool fee.
+
+The merchant sees a normal Solana payment land at their payout wallet; the AlgoVoi facilitator's standard SolanaVerifier confirms the destination transaction the same way it confirms direct Solana Pay payments. No extra integration work for the merchant.
 
 See [xChain payments](/concepts/xchain) for the full flow + bridge-source list.
 

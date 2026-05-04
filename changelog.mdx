@@ -3,6 +3,11 @@ title: Changelog
 description: What shipped and when. Major releases, breaking changes, new chain support.
 ---
 
+## 2026-05-05
+
+- **Circle CCTP V2 Fast Transfer is now the default protocol for Solana xChain.** End-to-end EVM USDC → Solana settlement in ~50 seconds (faster than Allbridge's ~90-120s), zero pool slippage, native Circle USDC on both sides. Implemented as a new `bridge_protocol` field on `xchain_bridge_attempts` (migration 100) so Algorand keeps using Allbridge (Circle hasn't deployed CCTP on Algorand) while Solana auto-routes via CCTP. AlgoVoi runs a Solana relayer wallet that submits `receive_message` on Circle's MessageTransmitterV2 for each attested deposit; daemon auto-retries on transient failures. Allbridge stays available as a fallback if anyone ever wants to opt out.
+- **Stellar xChain — in development.** Soroban-aware integration begins next sprint. Will support both Allbridge Core (live mainnet today, delivers Soroban-wrapped USDC) and Circle CCTP V2 (testnet today, mainnet pending Circle's 2026 ship). Both protocols share the same xChain attempts pipeline; Stellar adds a destination, not a parallel system.
+
 ## 2026-05-04
 
 - **xChain v2 — Solana destination live.** EVM USDC bridged via Allbridge Core now settles directly to Solana payout addresses, alongside the existing Algorand path. Each tenant picks the destination via the `xchain_destination_chain` flag (default `algorand`, opt-in `solana`); both can run concurrently across a fleet of merchants. Settlement bypasses the LogicSig step on Solana — Allbridge delivers canonical Circle USDC straight to the merchant's Solana wallet, no intermediate address.

@@ -1,32 +1,77 @@
 ---
 title: xChain payments
-description: Let MetaMask users pay AlgoVoi checkouts directly — no destination-chain wallet required. Supports Algorand and Solana destinations, with USDC bridged from any of seven EVM source chains via Allbridge Core.
+description: Let MetaMask users pay AlgoVoi checkouts directly — no destination-chain wallet required. Algorand and Solana destinations live; Stellar in development. Routes through Circle CCTP V2 where available, Allbridge Core elsewhere.
 ---
 
 xChain is a payment flow that lets any holder of an EVM wallet (MetaMask, Coinbase Wallet, Rabby, etc.) pay an AlgoVoi checkout without ever installing a wallet for the destination chain.
 
-It is available automatically on every Algorand mainnet and Solana mainnet hosted-checkout page. No adapter changes are needed — the xChain tab appears alongside the standard QR and wallet flows.
+It is available automatically on every Algorand mainnet and Solana mainnet hosted-checkout page. Stellar mainnet is in development. No adapter changes are needed — the xChain tab appears alongside the standard QR and wallet flows.
 
 ---
 
 ## Supported destinations
 
-The merchant's `xchain_destination_chain` setting selects where the bridged USDC lands:
+The merchant's `xchain_destination_chain` setting selects where the bridged USDC lands. Per-destination, AlgoVoi picks the best-available bridge protocol:
 
-| Destination | Asset | Settlement path |
+| Destination | Asset | Default protocol | Settlement time | Status |
+|---|---|---|---|---|
+| **Algorand** | USDCa (ASA `31566704`) | Allbridge Core (CCTP doesn't support Algorand) | ~5s direct / ~2-4 min bridged | ✅ Live |
+| **Solana** | USDC (mint `EPjFWdd5…`) | **Circle CCTP V2 Fast Transfer** | **~50s end-to-end** | ✅ Live |
+| **Stellar** | USDC | Allbridge → Soroban USDC (CCTP V2 mainnet on Circle 2026 roadmap) | ~90-120s | 🟡 In development |
+
+The destination is locked at payment-link creation time and snapshotted on the link itself, so the same tenant can have multiple xChain checkouts in flight to different destinations without cross-contamination.
+
+---
+
+## Bridge protocols
+
+xChain v2 routes attempts through one of two bridge protocols, picked per-destination at attempt-creation time:
+
+| | Circle CCTP V2 | Allbridge Core |
 |---|---|---|
-| **Algorand** | USDCa (ASA `31566704`) | Allbridge Core → deterministic LogicSig address → MetaMask EIP-712 signs the transfer to the merchant |
-| **Solana** | USDC (mint `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`) | Allbridge Core → directly to the merchant's Solana payout address — no intermediate wallet |
+| Asset model | **Burn-and-mint native USDC** (no wrapped variants) | Pool-based bridge |
+| Slippage | Zero | ~0.3% combined source+destination pool fee |
+| Source-side native fee | $0 (CCTP charges no native fee on `depositForBurn`) | ~0.0001-0.0003 ETH messenger fee |
+| Latency (Solana destination) | **~30-60s Fast Transfer** | ~90-120s |
+| Counterparty | Circle (USDC issuer) directly attests every transfer | Allbridge's validator network |
+| Currently used for | Solana destination | Algorand destination, Stellar destination, fallback for any chain CCTP doesn't cover |
 
-The destination is locked at payment-link creation time and snapshotted on the link itself, so the same tenant can have both Algorand and Solana xChain checkouts in flight at the same time without cross-contamination.
+CCTP V2 is structurally a better bridge primitive when both source and destination are on Circle's supported list. AlgoVoi defaults to CCTP V2 on Solana today; Stellar will follow once Circle ships CCTP V2 on Stellar mainnet.
 
 ---
 
 ## How it works
 
-### Algorand destination
+### Solana destination (Circle CCTP V2 — default)
 
-Every EVM address maps deterministically to an Algorand LogicSig address. The LogicSig is a smart contract that accepts a transaction if and only if the attached argument is a valid EIP-712 signature from the matching EVM private key. This means MetaMask can directly authorise Algorand transactions — no Algorand account needed in the customer's wallet.
+```
+Customer opens checkout → clicks "xChain" tab
+       ↓
+MetaMask connect → EVM address detected
+       ↓
+Customer selects source chain (Base, ARB, Optimism, ETH, …)
+       ↓
+Approve USDC spend in MetaMask (one-time, per source contract)
+       ↓
+MetaMask calls depositForBurn on Circle's TokenMessengerV2
+       ↓
+USDC burned on the source chain (~30s)
+       ↓
+Circle's Iris attestation service signs the cross-chain message
+       ↓
+AlgoVoi's CCTP relayer wallet calls receive_message on Solana
+       ↓
+USDC mints natively to the merchant's USDC ATA (~5-10s)
+       ↓
+Settle path verifies the destination tx, marks the link paid,
+notifies the merchant platform → customer redirects to order page
+```
+
+Total customer-facing time: **~50-90 seconds**.
+
+The relayer wallet is operated by AlgoVoi and pays the small Solana tx fee for the destination claim (~0.0005 SOL per delivery). Merchants don't need to do anything special — USDC arrives in their existing Solana wallet.
+
+### Algorand destination (Allbridge Core)
 
 ```
 Customer opens checkout → clicks "xChain" tab
@@ -53,58 +98,36 @@ Gateway checks USDCa balance at that Algorand address
   └───────────────────────────────────────────────────────────┘
 ```
 
-### Solana destination
+Algorand uses Allbridge because Circle hasn't deployed CCTP on Algorand. The deterministic LogicSig pattern keeps the on-chain footprint low and lets MetaMask sign the final ASA transfer directly via EIP-712.
 
-Solana doesn't need a deterministic-address indirection — Allbridge can deliver canonical Circle USDC straight to any Solana address. The flow is therefore simpler: bridge once, settle directly to the merchant's payout wallet.
+### Stellar destination (in development)
 
-```
-Customer opens checkout → clicks "xChain" tab
-       ↓
-MetaMask connect → EVM address detected
-       ↓
-Customer selects source chain (Base, ARB, Optimism, ETH, …)
-       ↓
-Approve USDC spend in MetaMask
-       ↓
-MetaMask calls swapAndBridge on Allbridge contract
-       ↓
-Allbridge delivers USDC to merchant's Solana payout address (~90–120s)
-       ↓
-Gateway scans the recipient ATA, confirms inbound transfer,
-runs the SolanaVerifier on the destination tx, marks the link paid,
-notifies the merchant platform (WooCommerce, Shopware, etc.)
-       ↓
-Customer redirects to merchant's order-received page
-```
+Stellar will support both protocols:
 
-There is no LogicSig, no opt-in sponsoring, no intermediate address — the merchant's Solana wallet receives USDC the same way it would from any other Solana payment.
+- **Allbridge Core** (live mainnet today) — delivers Soroban-wrapped USDC at contract `CCW67TSZ…`. Requires a Soroban-aware merchant wallet (Lobstr, Freighter, Hot, Albedo).
+- **Circle CCTP V2** (testnet today, mainnet pending Circle) — will deliver native classic USDC via Circle's `mint_and_forward` Soroban contract once Circle ships mainnet contracts.
+
+The Stellar build is queued for the next sprint. AlgoVoi's xChain framework was designed protocol-agnostic from day one (per-attempt `bridge_protocol` field on the attempts table), so adding Stellar is mostly contract-address + verifier work — the orchestration layer stays unchanged.
 
 ---
 
 ## Supported bridge sources
 
-The customer can bridge from any of these EVM chains via [Allbridge Core](https://allbridge.io):
+The customer can bridge from any of these EVM chains:
 
-| Source chain | EVM chain ID | Token bridged | Algorand dest | Solana dest |
-|---|---|---|---|---|
-| Ethereum | 1 | USDC | ✅ | ✅ |
-| Base | 8453 | USDC | ✅ | ✅ |
-| Arbitrum | 42161 | USDC | ✅ | ✅ |
-| Optimism | 10 | USDC | ✅ | ✅ |
-| Polygon | 137 | USDC | ✅ | ✅ |
-| BNB Chain | 56 | USDC | ✅ | ✅ |
-| Avalanche | 43114 | USDC | ✅ | ✅ |
+| Source chain | EVM chain ID | Token bridged | Algorand dest | Solana dest (CCTP) | Stellar dest (planned) |
+|---|---|---|---|---|---|
+| Ethereum | 1 | USDC | ✅ | ✅ | 🟡 |
+| Base | 8453 | USDC | ✅ | ✅ | 🟡 |
+| Arbitrum | 42161 | USDC | ✅ | ✅ | 🟡 |
+| Optimism | 10 | USDC | ✅ | ✅ | 🟡 |
+| Polygon | 137 | USDC | ✅ | ✅ | 🟡 |
+| BNB Chain | 56 | USDC | ✅ | — (CCTP doesn't deploy on BNB destination) | 🟡 |
+| Avalanche | 43114 | USDC | ✅ | ✅ | 🟡 |
 
-Allbridge fees: ~0.15% source-pool + ~0.15% destination-pool. The total fee is built into the bridge amount paid by the customer; the merchant receives the checkout amount with a small slippage tolerance for Solana destinations (default 0.5% / 50 µunits absolute, env-tunable via `XCHAIN_BRIDGE_SLIPPAGE_BPS` and `XCHAIN_BRIDGE_SLIPPAGE_ABS_MICROUNITS`).
+For Solana destinations CCTP V2 burns and mints native USDC with **no slippage**. The customer pays only the small CCTP Fast Transfer fee (capped at 14 bps of the bridge amount); the merchant receives the checkout amount minus that small deduction. AlgoVoi's slippage tolerance (`XCHAIN_BRIDGE_SLIPPAGE_BPS`, default 50) absorbs the deduction so the verifier accepts the delivery.
 
-The bridge contract on each EVM source chain charges a small native-gas fee (the messenger fee) that the customer pays in ETH/MATIC/AVAX/etc. on top of the USDC amount:
-
-| Source chain | Algorand destination fee tier | Solana destination fee tier |
-|---|---|---|
-| Base | `transfer` (0.0001 ETH) | `swap` (0.0003 ETH) |
-| Other EVM | `transfer` | `swap` |
-
-The Solana destination uses the higher `swap` tier because Allbridge's bridge contract treats it as a pool-swap rather than a same-token transfer.
+For Algorand destinations Allbridge applies a ~0.3% combined source+destination pool fee, also absorbed by the slippage tolerance.
 
 ---
 
@@ -113,12 +136,15 @@ The Solana destination uses the higher `swap` tier because Allbridge's bridge co
 | Path | Typical end-to-end |
 |---|---|
 | Algorand direct (USDCa already in LogicSig address) | ~5 seconds |
-| Algorand bridge path (Allbridge) | ~2–4 minutes |
-| Solana bridge path (Allbridge) | ~90–120 seconds |
+| Algorand bridge path (Allbridge) | ~2-4 minutes |
+| **Solana via Circle CCTP V2 Fast Transfer** | **~50-90 seconds** |
+| Solana via Allbridge (legacy fallback) | ~90-120 seconds |
+| Stellar via Allbridge (when shipped) | ~90-120 seconds |
+| Stellar via CCTP V2 (when Circle ships mainnet) | ~50-90 seconds |
 
 The hosted checkout page holds the customer through the entire bridge wait — it polls the destination chain for arrival before redirecting. Platform adapters and webhooks are unaffected by the extra latency.
 
-If the source-side bridge transaction reverts on-chain (most often because the customer's wallet lacks the native-gas messenger fee), the checkout detects this within a few seconds via `eth_getTransactionReceipt` and surfaces a "Try bridge again" button. No funds move; no spinning indefinitely.
+If the source-side bridge transaction reverts on-chain (most often because the customer's wallet lacks the native-gas messenger fee on Allbridge, or USDC allowance for CCTP), the checkout detects this within a few seconds via `eth_getTransactionReceipt` and surfaces a "Try bridge again" button. No funds move; no spinning indefinitely.
 
 ---
 
@@ -130,22 +156,33 @@ If the customer's Algorand LogicSig address has never been used (no ALGO, not op
 
 Sponsoring requires `XCHAIN_ALGO_SPONSOR_MNEMONIC` to be set in the gateway environment. If not configured, first-time opt-ins return a 503 and the customer must pre-fund their LogicSig address manually.
 
-### Solana: no setup needed
+### Solana: relayer creates ATAs on first delivery
 
-Solana destinations don't need any sponsor configuration. Allbridge automatically creates the recipient's USDC associated token account (ATA) on first delivery if it doesn't exist, paid for from the bridge fee. No first-checkout penalty for the merchant or the customer.
+Solana destinations don't need any merchant-side setup. AlgoVoi's CCTP relayer prepends a `create_idempotent_associated_token_account` instruction to the receive_message transaction, so the merchant's USDC ATA is created on the first delivery if it doesn't already exist. Costs ~0.002 SOL of rent (paid by the relayer wallet, not the merchant).
+
+For merchants who use Allbridge instead of CCTP (legacy fallback), Allbridge's bridge program creates the ATA on first delivery from the bridge fee.
+
+### Stellar: TBD when shipped
+
+Will use the same auto-create-ATA pattern via Circle's `mint_and_forward` Soroban contract. Documentation will be added when the build ships.
 
 ---
 
 ## Merchant requirements
 
-**No action required** for existing tenants on Algorand. xChain activates automatically for any tenant whose `xchain_destination_chain` is set (default: `algorand`, opt-in: `solana`).
+**No action required** for existing tenants on Algorand or Solana. xChain activates automatically for any tenant whose `xchain_destination_chain` is set (default: `algorand`, opt-in: `solana`).
 
-For Solana xChain:
+For Solana xChain (default protocol = CCTP V2):
 1. The tenant needs a payout wallet on Solana mainnet (any standard Solana address — Phantom, Solflare, hardware wallet, exchange, etc.)
 2. Set `xchain_destination_chain = 'solana'` on the tenant record
 3. Set the tenant's `chain` to `solana_mainnet` and `receiver_address` to the Solana payout pubkey
 
-The payout address configured for the tenant receives canonical Circle USDC on Solana — verified by AlgoVoi's `SolanaVerifier` on the specific destination transaction Allbridge produces, then linked back to the originating checkout via the `xchain_bridge_attempts` table.
+The payout address receives canonical Circle USDC on Solana — verified by AlgoVoi's `SolanaVerifier` on the specific destination transaction Circle's CCTP program produces, then linked back to the originating checkout via the `xchain_bridge_attempts` table.
+
+For Stellar xChain (planned):
+1. The tenant will need a Soroban-aware Stellar wallet (Lobstr / Freighter / Hot / Albedo) for the Allbridge route, or any Stellar wallet for the CCTP route once Circle ships mainnet
+2. `xchain_destination_chain = 'stellar'`
+3. `receiver_address` = Stellar `G…` account or `C…` Soroban contract address
 
 ---
 
@@ -158,15 +195,21 @@ pending_signature  → calldata returned to shopper, awaiting MetaMask sign
        ↓
 pending_bridge     → /xchain/source-tx-recorded called, source_tx_hash known
        ↓
-delivered          → bridge confirmed delivery on the destination chain
+delivered          → relayer (CCTP) or Allbridge confirmed delivery; dest_tx_hash recorded
        ↓
 verified           → on-chain verifier confirmed dest_tx_hash matches the
-                     expected receiver + amount
+                     expected receiver + amount (within slippage tolerance)
 ```
 
 Two terminal states absorb operational edge cases:
 - **`failed`** — source tx reverted, verifier rejected, or the reaper swept it after exceeding `pending_bridge` timeout
 - **`abandoned`** — shopper closed the page before signing; the reaper sweeps `pending_signature` rows older than 30 minutes
+
+Each attempt row also records:
+- `bridge_protocol` (`allbridge` or `cctp`) — chosen at creation time, drives which calldata builder ran on the source side and which settle path runs on the destination
+- `destination_chain` — `algorand`, `solana`, or `stellar`
+
+The CCTP path additionally drives a daemon (`cctp_relayer_loop`) that polls Circle's Iris attestation API and submits `receive_message` on Solana when the source tx finalises. The daemon auto-retries the settle path on transient failures, so manual operator intervention is rare.
 
 Operators can inspect any attempt via the admin API:
 
@@ -176,7 +219,7 @@ GET /internal/xchain/links/{link_id}/attempts
 GET /internal/xchain/needs-review
 ```
 
-The attempt row is the source of truth for which destination tx hash settled which checkout — concurrent checkouts to the same Solana merchant address are matched against their specific source-tx → dest-tx pair, not a "best match in the recent window" heuristic.
+The attempt row is the source of truth for which destination tx hash settled which checkout — concurrent checkouts to the same merchant address are matched against their specific source-tx → dest-tx pair, not a "best match in the recent window" heuristic.
 
 ---
 
@@ -193,20 +236,30 @@ The LogicSig contract is an AVM v11 program that:
 
 Source: [chopmob-cloud/xchain-accounts](https://github.com/chopmob-cloud/xchain-accounts)
 
-### Solana destination tx discovery
+### Solana CCTP V2 destination
 
-Allbridge's public REST API does not expose a working transfer-status endpoint at this time, so AlgoVoi discovers the destination transaction by scanning the recipient's USDC associated token account directly via Solana RPC `getSignaturesForAddress` + `getTransaction`. The first signature with `blockTime ≥ attempt.created_at − 60s` and a recipient-ATA balance delta meeting the slippage floor is recorded as `dest_tx_hash` and fed to the standard `SolanaVerifier`.
+AlgoVoi runs a Solana relayer wallet that submits `receive_message` on Circle's MessageTransmitterV2 program for each attested CCTP V2 message. The wallet is funded with ~0.05 SOL of runway and rotates per operator policy.
 
-This is the same primitive used by the Algorand destination flow (poll the destination address rather than trust a third-party bridge oracle), adapted for Solana's account model.
+Per Circle's Solana programs reference, `mintRecipient` in the burn message body is the destination USDC ATA (not the merchant's wallet pubkey). AlgoVoi derives the ATA from `(merchant_wallet, USDC_mint)` and encodes it on the source side via `cctp_service.encode_mint_recipient`. The destination program then uses Anchor's `Account<TokenAccount>` constraint to validate the USDC ATA at slot 15 of the receive_message instruction. Circle's `fee_recipient_token_account` (slot 14) is hardcoded — its USDC ATA is owned by `4BPnUz…` and pre-derived in `cctp_solana_relayer._FEE_RECIPIENT_OWNER_BY_MINT`.
+
+The 20-account `receive_message` instruction uses Circle's published Address Lookup Table `Ff3yi1meWQQ19VPZMzGg6H8JQQeRudiV7QtVtyzJyoht` to fit within Solana's 1232-byte tx-size limit.
+
+### Solana destination tx discovery (Allbridge fallback)
+
+For Solana attempts that route through Allbridge (legacy fallback), AlgoVoi discovers the destination transaction by scanning the recipient's USDC ATA via Solana RPC `getSignaturesForAddress` + `getTransaction`. The first signature with `blockTime ≥ attempt.created_at − 60s` and a recipient-ATA balance delta meeting the slippage floor is recorded as `dest_tx_hash` and fed to the standard `SolanaVerifier`. Allbridge's public REST API doesn't expose a working transfer-status endpoint, so direct destination polling is the only reliable signal.
+
+### Stellar destination (when shipped)
+
+Will use Soroban contract calls via `stellar-sdk` Python with a Stellar relayer wallet. The CCTP V2 path uses Circle's `CctpForwarder` contract — `mintRecipient` in the burn message must be the CctpForwarder address (NOT the merchant), and the real recipient is encoded in `hookData` as a UTF-8 strkey. USDC on Stellar uses 7 decimal precision (vs 6 on every other chain), so the destination mint scales the message amount by 10. AlgoVoi's verifier handles the scaling.
 
 ---
 
 ## Limitations
 
-- **Algorand mainnet and Solana mainnet only.** xChain is not available on VOI, Hedera, Stellar, Base, Tempo, or any testnet.
-- **USDC stablecoins only.** Native ALGO / SOL payments via xChain are not supported.
-- **MetaMask (or any injected `window.ethereum` provider).** WalletConnect is not supported on the xChain tab. Customers paying directly on Solana (without bridging) use the standard Solana QR / Solana Pay flow on the same checkout page.
-- **One bridge protocol today.** Allbridge Core native messenger. Circle CCTP V2 and Wormhole NTT are on the roadmap as cheaper / faster alternates for the Solana destination.
+- **Algorand mainnet and Solana mainnet only as of 2026-05.** Stellar mainnet is in development.
+- **USDC stablecoins only.** Native ALGO / SOL / XLM payments via xChain are not supported.
+- **MetaMask (or any injected `window.ethereum` provider).** WalletConnect is not supported on the xChain tab. Customers paying directly on the destination chain (without bridging) use the standard QR / Solana Pay / Stellar SEP-7 flow on the same checkout page.
+- **CCTP V2 chain coverage.** CCTP V2 is currently used for Solana destinations. Algorand and Stellar destinations route via Allbridge until/unless Circle deploys CCTP on those chains. The framework is protocol-agnostic per attempt, so flipping a destination to CCTP is a single-line config change once Circle ships.
 
 ---
 
@@ -214,5 +267,7 @@ This is the same primitive used by the Algorand destination flow (poll the desti
 
 - [Algorand](/chains/algorand) — chain reference, memo binding, payout address requirements
 - [Solana](/chains/solana) — Solana Pay reference binding, SPL Token verification, payout requirements
+- [Stellar](/chains/stellar) — chain reference, memo binding (in development for xChain)
 - [Payment links](/concepts/payment-links) — how checkout links are created and managed
-- [Wormhole integration](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/wormhole.md) — alternative bridge path (Wormhole NTT, manual redeem, longer latency)
+- [Circle CCTP V2](https://developers.circle.com/cctp) — protocol specification
+- [Allbridge Core](https://allbridge.io) — fallback bridge for non-CCTP destinations
