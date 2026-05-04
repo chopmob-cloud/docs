@@ -3,6 +3,14 @@ title: Changelog
 description: What shipped and when. Major releases, breaking changes, new chain support.
 ---
 
+## 2026-05-04
+
+- **xChain v2 — Solana destination live.** EVM USDC bridged via Allbridge Core now settles directly to Solana payout addresses, alongside the existing Algorand path. Each tenant picks the destination via the `xchain_destination_chain` flag (default `algorand`, opt-in `solana`); both can run concurrently across a fleet of merchants. Settlement bypasses the LogicSig step on Solana — Allbridge delivers canonical Circle USDC straight to the merchant's Solana wallet, no intermediate address.
+- **Solana xChain typical end-to-end** ≈ 90–120s for the full bridge-and-settle cycle. Source-tx revert detection added — if the customer's `swapAndBridge` reverts on Base/Arb/etc. (most common cause: insufficient native gas for the bridge messenger fee), the checkout surfaces "Try bridge again" within seconds rather than spinning indefinitely.
+- **Bridge slippage tolerance** for Solana destinations — default 0.5% / 50 µunits absolute, env-tunable via `XCHAIN_BRIDGE_SLIPPAGE_BPS` and `XCHAIN_BRIDGE_SLIPPAGE_ABS_MICROUNITS`. Required because Allbridge's combined source+dest pool fees deliver a few basis points under the bridged amount on small payments.
+- **Merchant platform notifications wired into xChain settle** — WooCommerce, OpenCart, PrestaShop, and Shopware integrations now flip the order to `processing` automatically on xChain Solana settlement, mirroring the direct-payment `/verify` flow. Previously xChain checkouts left the order stuck in `pending payment` even after USDC arrived.
+- **Already-paid checkout redirect** — refreshing a paid checkout link now auto-redirects to the merchant's order-received page after 2s instead of dead-ending on a "Back to home" link pointing at the AlgoVoi gateway domain.
+
 ## 2026-04-27
 
 - **7-chain adapter rollout** — Base, Solana, and Tempo chains added to all 23 adapter files: MPP adapter, AP2 adapter, 7 AI model adapters (OpenAI, Claude, Gemini, Bedrock, Cohere, xAI, Mistral), 9 AI framework adapters, and 4 no-code adapters (Zapier, Make, n8n, X). All adapters bumped to v1.1.0. 93/93 smoke checks pass.

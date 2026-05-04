@@ -1,19 +1,32 @@
 ---
 title: xChain payments
-description: Let MetaMask users pay Algorand checkouts directly — no Algorand wallet required. Powered by xchain-accounts ECDSA LogicSig and Allbridge Core.
+description: Let MetaMask users pay AlgoVoi checkouts directly — no destination-chain wallet required. Supports Algorand and Solana destinations, with USDC bridged from any of seven EVM source chains via Allbridge Core.
 ---
 
-xChain is a payment flow that lets any holder of an EVM wallet (MetaMask, Coinbase Wallet, Rabby, etc.) pay an AlgoVoi Algorand checkout without ever installing an Algorand wallet or learning about ASAs.
+xChain is a payment flow that lets any holder of an EVM wallet (MetaMask, Coinbase Wallet, Rabby, etc.) pay an AlgoVoi checkout without ever installing a wallet for the destination chain.
 
-It is available automatically on every Algorand mainnet hosted-checkout page. No adapter changes are needed — the xChain tab appears alongside the standard QR and wallet flows.
+It is available automatically on every Algorand mainnet and Solana mainnet hosted-checkout page. No adapter changes are needed — the xChain tab appears alongside the standard QR and wallet flows.
+
+---
+
+## Supported destinations
+
+The merchant's `xchain_destination_chain` setting selects where the bridged USDC lands:
+
+| Destination | Asset | Settlement path |
+|---|---|---|
+| **Algorand** | USDCa (ASA `31566704`) | Allbridge Core → deterministic LogicSig address → MetaMask EIP-712 signs the transfer to the merchant |
+| **Solana** | USDC (mint `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`) | Allbridge Core → directly to the merchant's Solana payout address — no intermediate wallet |
+
+The destination is locked at payment-link creation time and snapshotted on the link itself, so the same tenant can have both Algorand and Solana xChain checkouts in flight at the same time without cross-contamination.
 
 ---
 
 ## How it works
 
-Every EVM address maps deterministically to an Algorand LogicSig address. The LogicSig is a smart contract that accepts a transaction if and only if the attached argument is a valid EIP-712 signature from the matching EVM private key. This means MetaMask can directly authorise Algorand transactions — no bridge, no swap, no Algorand account needed in the customer's wallet.
+### Algorand destination
 
-AlgoVoi's checkout page handles the full flow in-browser:
+Every EVM address maps deterministically to an Algorand LogicSig address. The LogicSig is a smart contract that accepts a transaction if and only if the attached argument is a valid EIP-712 signature from the matching EVM private key. This means MetaMask can directly authorise Algorand transactions — no Algorand account needed in the customer's wallet.
 
 ```
 Customer opens checkout → clicks "xChain" tab
@@ -40,23 +53,58 @@ Gateway checks USDCa balance at that Algorand address
   └───────────────────────────────────────────────────────────┘
 ```
 
+### Solana destination
+
+Solana doesn't need a deterministic-address indirection — Allbridge can deliver canonical Circle USDC straight to any Solana address. The flow is therefore simpler: bridge once, settle directly to the merchant's payout wallet.
+
+```
+Customer opens checkout → clicks "xChain" tab
+       ↓
+MetaMask connect → EVM address detected
+       ↓
+Customer selects source chain (Base, ARB, Optimism, ETH, …)
+       ↓
+Approve USDC spend in MetaMask
+       ↓
+MetaMask calls swapAndBridge on Allbridge contract
+       ↓
+Allbridge delivers USDC to merchant's Solana payout address (~90–120s)
+       ↓
+Gateway scans the recipient ATA, confirms inbound transfer,
+runs the SolanaVerifier on the destination tx, marks the link paid,
+notifies the merchant platform (WooCommerce, Shopware, etc.)
+       ↓
+Customer redirects to merchant's order-received page
+```
+
+There is no LogicSig, no opt-in sponsoring, no intermediate address — the merchant's Solana wallet receives USDC the same way it would from any other Solana payment.
+
 ---
 
 ## Supported bridge sources
 
-When the customer needs to fund their Algorand LogicSig address, they can bridge from any of these chains via [Allbridge Core](https://allbridge.io):
+The customer can bridge from any of these EVM chains via [Allbridge Core](https://allbridge.io):
 
-| Chain | EVM chain ID | Token bridged |
+| Source chain | EVM chain ID | Token bridged | Algorand dest | Solana dest |
+|---|---|---|---|---|
+| Ethereum | 1 | USDC | ✅ | ✅ |
+| Base | 8453 | USDC | ✅ | ✅ |
+| Arbitrum | 42161 | USDC | ✅ | ✅ |
+| Optimism | 10 | USDC | ✅ | ✅ |
+| Polygon | 137 | USDC | ✅ | ✅ |
+| BNB Chain | 56 | USDC | ✅ | ✅ |
+| Avalanche | 43114 | USDC | ✅ | ✅ |
+
+Allbridge fees: ~0.15% source-pool + ~0.15% destination-pool. The total fee is built into the bridge amount paid by the customer; the merchant receives the checkout amount with a small slippage tolerance for Solana destinations (default 0.5% / 50 µunits absolute, env-tunable via `XCHAIN_BRIDGE_SLIPPAGE_BPS` and `XCHAIN_BRIDGE_SLIPPAGE_ABS_MICROUNITS`).
+
+The bridge contract on each EVM source chain charges a small native-gas fee (the messenger fee) that the customer pays in ETH/MATIC/AVAX/etc. on top of the USDC amount:
+
+| Source chain | Algorand destination fee tier | Solana destination fee tier |
 |---|---|---|
-| Ethereum | 1 | USDC |
-| Base | 8453 | USDC |
-| Arbitrum | 42161 | USDC |
-| Optimism | 10 | USDC |
-| Polygon | 137 | USDC |
-| BNB Chain | 56 | USDC |
-| Avalanche | 43114 | USDC |
+| Base | `transfer` (0.0001 ETH) | `swap` (0.0003 ETH) |
+| Other EVM | `transfer` | `swap` |
 
-All transfers arrive as native USDCa (ASA `31566704`) on Algorand mainnet. The Allbridge fee (~0.3%) is built into the bridge amount — the merchant receives the exact checkout amount; the customer pays the fee on top.
+The Solana destination uses the higher `swap` tier because Allbridge's bridge contract treats it as a pool-swap rather than a same-token transfer.
 
 ---
 
@@ -64,30 +112,77 @@ All transfers arrive as native USDCa (ASA `31566704`) on Algorand mainnet. The A
 
 | Path | Typical end-to-end |
 |---|---|
-| Direct (USDCa already in LogicSig address) | ~5 seconds |
-| Bridge path (Allbridge) | ~2–4 minutes |
+| Algorand direct (USDCa already in LogicSig address) | ~5 seconds |
+| Algorand bridge path (Allbridge) | ~2–4 minutes |
+| Solana bridge path (Allbridge) | ~90–120 seconds |
 
-The hosted checkout page holds the customer through the entire bridge wait — it polls for Allbridge completion before redirecting. Platform adapters and webhooks are unaffected by the extra latency.
+The hosted checkout page holds the customer through the entire bridge wait — it polls the destination chain for arrival before redirecting. Platform adapters and webhooks are unaffected by the extra latency.
+
+If the source-side bridge transaction reverts on-chain (most often because the customer's wallet lacks the native-gas messenger fee), the checkout detects this within a few seconds via `eth_getTransactionReceipt` and surfaces a "Try bridge again" button. No funds move; no spinning indefinitely.
 
 ---
 
-## First-time setup: opt-in sponsoring
+## First-time setup
+
+### Algorand: opt-in sponsoring
 
 If the customer's Algorand LogicSig address has never been used (no ALGO, not opted in to USDCa), AlgoVoi's sponsor wallet tops it up with enough ALGO for the minimum balance and ASA opt-in (0.202 ALGO). The customer signs an EIP-712 message to authorise the opt-in transaction — still inside MetaMask, no Algorand wallet involved.
 
 Sponsoring requires `XCHAIN_ALGO_SPONSOR_MNEMONIC` to be set in the gateway environment. If not configured, first-time opt-ins return a 503 and the customer must pre-fund their LogicSig address manually.
 
+### Solana: no setup needed
+
+Solana destinations don't need any sponsor configuration. Allbridge automatically creates the recipient's USDC associated token account (ATA) on first delivery if it doesn't exist, paid for from the bridge fee. No first-checkout penalty for the merchant or the customer.
+
 ---
 
 ## Merchant requirements
 
-**No action required** for existing tenants. xChain activates automatically for any tenant whose preferred network is `algorand_mainnet`. There are no new credentials, no webhook changes, and no adapter updates.
+**No action required** for existing tenants on Algorand. xChain activates automatically for any tenant whose `xchain_destination_chain` is set (default: `algorand`, opt-in: `solana`).
 
-The payout address configured for the tenant receives USDCa in the normal way — from the customer's LogicSig address, via a standard Algorand ASA transfer, verified by the AlgoVoi facilitator exactly like any other Algorand payment.
+For Solana xChain:
+1. The tenant needs a payout wallet on Solana mainnet (any standard Solana address — Phantom, Solflare, hardware wallet, exchange, etc.)
+2. Set `xchain_destination_chain = 'solana'` on the tenant record
+3. Set the tenant's `chain` to `solana_mainnet` and `receiver_address` to the Solana payout pubkey
+
+The payout address configured for the tenant receives canonical Circle USDC on Solana — verified by AlgoVoi's `SolanaVerifier` on the specific destination transaction Allbridge produces, then linked back to the originating checkout via the `xchain_bridge_attempts` table.
+
+---
+
+## Idempotency and operations
+
+Every xChain checkout creates a row in `control_plane.xchain_bridge_attempts` with the following lifecycle:
+
+```
+pending_signature  → calldata returned to shopper, awaiting MetaMask sign
+       ↓
+pending_bridge     → /xchain/source-tx-recorded called, source_tx_hash known
+       ↓
+delivered          → bridge confirmed delivery on the destination chain
+       ↓
+verified           → on-chain verifier confirmed dest_tx_hash matches the
+                     expected receiver + amount
+```
+
+Two terminal states absorb operational edge cases:
+- **`failed`** — source tx reverted, verifier rejected, or the reaper swept it after exceeding `pending_bridge` timeout
+- **`abandoned`** — shopper closed the page before signing; the reaper sweeps `pending_signature` rows older than 30 minutes
+
+Operators can inspect any attempt via the admin API:
+
+```
+GET /internal/xchain/attempts/{attempt_id}
+GET /internal/xchain/links/{link_id}/attempts
+GET /internal/xchain/needs-review
+```
+
+The attempt row is the source of truth for which destination tx hash settled which checkout — concurrent checkouts to the same Solana merchant address are matched against their specific source-tx → dest-tx pair, not a "best match in the recent window" heuristic.
 
 ---
 
 ## Technical notes
+
+### Algorand LogicSig
 
 The LogicSig contract is an AVM v11 program that:
 
@@ -98,18 +193,26 @@ The LogicSig contract is an AVM v11 program that:
 
 Source: [chopmob-cloud/xchain-accounts](https://github.com/chopmob-cloud/xchain-accounts)
 
+### Solana destination tx discovery
+
+Allbridge's public REST API does not expose a working transfer-status endpoint at this time, so AlgoVoi discovers the destination transaction by scanning the recipient's USDC associated token account directly via Solana RPC `getSignaturesForAddress` + `getTransaction`. The first signature with `blockTime ≥ attempt.created_at − 60s` and a recipient-ATA balance delta meeting the slippage floor is recorded as `dest_tx_hash` and fed to the standard `SolanaVerifier`.
+
+This is the same primitive used by the Algorand destination flow (poll the destination address rather than trust a third-party bridge oracle), adapted for Solana's account model.
+
 ---
 
 ## Limitations
 
-- **Algorand mainnet only.** xChain is not available on VOI, Hedera, Stellar, Base, Solana, Tempo, or any testnet.
-- **USDCa only.** Native ALGO payments via LogicSig are not supported in the current implementation.
-- **MetaMask (or any injected `window.ethereum` provider).** WalletConnect is not supported.
+- **Algorand mainnet and Solana mainnet only.** xChain is not available on VOI, Hedera, Stellar, Base, Tempo, or any testnet.
+- **USDC stablecoins only.** Native ALGO / SOL payments via xChain are not supported.
+- **MetaMask (or any injected `window.ethereum` provider).** WalletConnect is not supported on the xChain tab. Customers paying directly on Solana (without bridging) use the standard Solana QR / Solana Pay flow on the same checkout page.
+- **One bridge protocol today.** Allbridge Core native messenger. Circle CCTP V2 and Wormhole NTT are on the roadmap as cheaper / faster alternates for the Solana destination.
 
 ---
 
 ## See also
 
 - [Algorand](/chains/algorand) — chain reference, memo binding, payout address requirements
+- [Solana](/chains/solana) — Solana Pay reference binding, SPL Token verification, payout requirements
 - [Payment links](/concepts/payment-links) — how checkout links are created and managed
 - [Wormhole integration](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/wormhole.md) — alternative bridge path (Wormhole NTT, manual redeem, longer latency)

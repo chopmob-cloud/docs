@@ -40,7 +40,16 @@ Like SPL tokens generally, USDC requires an **associated token account** (ATA) o
 - [Solflare](https://solflare.com)
 - [Backpack](https://backpack.app)
 
+## xChain — pay from MetaMask, settle on Solana
+
+Tenants on `solana_mainnet` automatically get the xChain tab on every hosted checkout. A customer holding USDC on any of seven EVM chains (Ethereum, Base, Arbitrum, Optimism, Polygon, BNB, Avalanche) can pay the Solana checkout from MetaMask without installing Phantom or any other Solana wallet — Allbridge Core bridges the USDC and delivers canonical Circle USDC directly to the merchant's Solana payout address.
+
+Typical bridge time: 90–120 seconds. The merchant sees a normal Solana payment land at their payout wallet; the AlgoVoi facilitator's standard SolanaVerifier confirms the destination transaction the same way it confirms direct Solana Pay payments. No extra integration work for the merchant.
+
+See [xChain payments](/concepts/xchain) for the full flow + bridge-source list.
+
 ## See also
 
 - [Solana Actions and Blinks](/protocols/solana-actions) for the Blink rendering
 - [x402 protocol](/protocols/x402) for the payment protocol layer
+- [xChain payments](/concepts/xchain) — pay Solana checkouts from MetaMask, no Phantom required
