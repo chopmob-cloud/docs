@@ -1,11 +1,11 @@
 ---
 title: xChain payments
-description: Let MetaMask users pay AlgoVoi checkouts directly — no destination-chain wallet required. Algorand and Solana destinations live; Stellar in development. Routes through Circle CCTP V2 where available, Allbridge Core elsewhere.
+description: Let MetaMask users pay AlgoVoi checkouts directly — no destination-chain wallet required. Algorand, Solana, and Stellar destinations live. Routes through Circle CCTP V2 where available, Allbridge Core elsewhere.
 ---
 
 xChain is a payment flow that lets any holder of an EVM wallet (MetaMask, Coinbase Wallet, Rabby, etc.) pay an AlgoVoi checkout without ever installing a wallet for the destination chain.
 
-It is available automatically on every Algorand mainnet and Solana mainnet hosted-checkout page. Stellar mainnet is in development. No adapter changes are needed — the xChain tab appears alongside the standard QR and wallet flows.
+It is available automatically on every Algorand mainnet, Solana mainnet, and Stellar mainnet hosted-checkout page. No adapter changes are needed — the xChain tab appears alongside the standard QR and wallet flows.
 
 ---
 
@@ -17,7 +17,7 @@ The merchant's `xchain_destination_chain` setting selects where the bridged USDC
 |---|---|---|---|---|
 | **Algorand** | USDCa (ASA `31566704`) | Allbridge Core (CCTP doesn't support Algorand) | ~5s direct / ~2-4 min bridged | ✅ Live |
 | **Solana** | USDC (mint `EPjFWdd5…`) | **Circle CCTP V2 Fast Transfer** | **~50s end-to-end** | ✅ Live |
-| **Stellar** | USDC | Allbridge → Soroban USDC (CCTP V2 mainnet on Circle 2026 roadmap) | ~90-120s | 🟡 In development |
+| **Stellar** | USDC (canonical Circle issuer `GA5ZSEJ…`) | Allbridge Core → classic Stellar USDC via Soroban swap pool (CCTP V2 added when Circle ships mainnet) | ~60-120s | ✅ Live |
 
 The destination is locked at payment-link creation time and snapshotted on the link itself, so the same tenant can have multiple xChain checkouts in flight to different destinations without cross-contamination.
 
@@ -100,14 +100,14 @@ Gateway checks USDCa balance at that Algorand address
 
 Algorand uses Allbridge because Circle hasn't deployed CCTP on Algorand. The deterministic LogicSig pattern keeps the on-chain footprint low and lets MetaMask sign the final ASA transfer directly via EIP-712.
 
-### Stellar destination (in development)
+### Stellar destination (live via Allbridge; CCTP V2 coming)
 
-Stellar will support both protocols:
+Stellar supports both protocols:
 
-- **Allbridge Core** (live mainnet today) — delivers Soroban-wrapped USDC at contract `CCW67TSZ…`. Requires a Soroban-aware merchant wallet (Lobstr, Freighter, Hot, Albedo).
+- **Allbridge Core** (live mainnet today) — uses Allbridge's swap-and-bridge route, which invokes a Soroban swap pool that auto-converts Soroban-wrapped USDC into classic Stellar USDC at Circle's canonical issuer (`GA5ZSEJ…`) and credits the merchant's Stellar address directly. Any Stellar wallet supports this asset — no Soroban-aware wallet required.
 - **Circle CCTP V2** (testnet today, mainnet pending Circle) — will deliver native classic USDC via Circle's `mint_and_forward` Soroban contract once Circle ships mainnet contracts.
 
-The Stellar build is queued for the next sprint. AlgoVoi's xChain framework was designed protocol-agnostic from day one (per-attempt `bridge_protocol` field on the attempts table), so adding Stellar is mostly contract-address + verifier work — the orchestration layer stays unchanged.
+The Allbridge route is live on mainnet today and delivers classic Stellar USDC (Circle issuer `GA5ZSEJ…`) directly to the merchant's `G…` address — any Stellar wallet works. CCTP V2 will be added once Circle ships Stellar mainnet contracts publicly. AlgoVoi's xChain framework is protocol-agnostic per attempt (`bridge_protocol` on the attempts table), so adding the second protocol is a contract-address + verifier swap — the orchestration layer stays unchanged.
 
 ---
 
@@ -115,15 +115,15 @@ The Stellar build is queued for the next sprint. AlgoVoi's xChain framework was 
 
 The customer can bridge from any of these EVM chains:
 
-| Source chain | EVM chain ID | Token bridged | Algorand dest | Solana dest (CCTP) | Stellar dest (planned) |
+| Source chain | EVM chain ID | Token bridged | Algorand dest | Solana dest (CCTP) | Stellar dest (Allbridge) |
 |---|---|---|---|---|---|
-| Ethereum | 1 | USDC | ✅ | ✅ | 🟡 |
-| Base | 8453 | USDC | ✅ | ✅ | 🟡 |
-| Arbitrum | 42161 | USDC | ✅ | ✅ | 🟡 |
-| Optimism | 10 | USDC | ✅ | ✅ | 🟡 |
-| Polygon | 137 | USDC | ✅ | ✅ | 🟡 |
-| BNB Chain | 56 | USDC | ✅ | — (CCTP doesn't deploy on BNB destination) | 🟡 |
-| Avalanche | 43114 | USDC | ✅ | ✅ | 🟡 |
+| Ethereum | 1 | USDC | ✅ | ✅ | ✅ |
+| Base | 8453 | USDC | ✅ | ✅ | ✅ |
+| Arbitrum | 42161 | USDC | ✅ | ✅ | ✅ |
+| Optimism | 10 | USDC | ✅ | ✅ | ✅ |
+| Polygon | 137 | USDC | ✅ | ✅ | ✅ |
+| BNB Chain | 56 | USDC | ✅ | — (CCTP doesn't deploy on BNB destination) | ✅ |
+| Avalanche | 43114 | USDC | ✅ | ✅ | ✅ |
 
 For Solana destinations CCTP V2 burns and mints native USDC with **no slippage**. The customer pays only the small CCTP Fast Transfer fee (capped at 14 bps of the bridge amount); the merchant receives the checkout amount minus that small deduction. AlgoVoi's slippage tolerance (`XCHAIN_BRIDGE_SLIPPAGE_BPS`, default 50) absorbs the deduction so the verifier accepts the delivery.
 
@@ -139,7 +139,7 @@ For Algorand destinations Allbridge applies a ~0.3% combined source+destination 
 | Algorand bridge path (Allbridge) | ~2-4 minutes |
 | **Solana via Circle CCTP V2 Fast Transfer** | **~50-90 seconds** |
 | Solana via Allbridge (legacy fallback) | ~90-120 seconds |
-| Stellar via Allbridge (when shipped) | ~90-120 seconds |
+| Stellar via Allbridge | ~60-120 seconds |
 | Stellar via CCTP V2 (when Circle ships mainnet) | ~50-90 seconds |
 
 The hosted checkout page holds the customer through the entire bridge wait — it polls the destination chain for arrival before redirecting. Platform adapters and webhooks are unaffected by the extra latency.
@@ -162,7 +162,9 @@ Solana destinations don't need any merchant-side setup. AlgoVoi's CCTP relayer p
 
 For merchants who use Allbridge instead of CCTP (legacy fallback), Allbridge's bridge program creates the ATA on first delivery from the bridge fee.
 
-### Stellar: TBD when shipped
+### Stellar: Allbridge Soroban scanner (Horizon)
+
+The Stellar verifier polls Horizon's `/accounts/{id}/operations` for the merchant's payout address, looking for an inbound `invoke_host_function` op (Soroban) or `payment` op (classic) on the Soroban USDC contract `CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75`. Each candidate transaction's effects are checked for a `contract_credited` effect crediting the merchant address with at least the expected amount (after `tolerated_min_delivered` slippage). Stellar USDC has 7-decimal precision, so the floor is scaled `microunits × 10` before comparison.
 
 Will use the same auto-create-ATA pattern via Circle's `mint_and_forward` Soroban contract. Documentation will be added when the build ships.
 
@@ -179,10 +181,11 @@ For Solana xChain (default protocol = CCTP V2):
 
 The payout address receives canonical Circle USDC on Solana — verified by AlgoVoi's `SolanaVerifier` on the specific destination transaction Circle's CCTP program produces, then linked back to the originating checkout via the `xchain_bridge_attempts` table.
 
-For Stellar xChain (planned):
-1. The tenant will need a Soroban-aware Stellar wallet (Lobstr / Freighter / Hot / Albedo) for the Allbridge route, or any Stellar wallet for the CCTP route once Circle ships mainnet
+For Stellar xChain:
+1. The tenant needs any Stellar wallet (the Allbridge route delivers classic USDC at Circle's canonical issuer; CCTP V2 will deliver native USDC the same way once Circle ships mainnet)
 2. `xchain_destination_chain = 'stellar'`
 3. `receiver_address` = Stellar `G…` account or `C…` Soroban contract address
+4. Account must already exist on Stellar (1 XLM minimum reserve) — Soroban tokens require no trustline
 
 ---
 
@@ -248,15 +251,17 @@ The 20-account `receive_message` instruction uses Circle's published Address Loo
 
 For Solana attempts that route through Allbridge (legacy fallback), AlgoVoi discovers the destination transaction by scanning the recipient's USDC ATA via Solana RPC `getSignaturesForAddress` + `getTransaction`. The first signature with `blockTime ≥ attempt.created_at − 60s` and a recipient-ATA balance delta meeting the slippage floor is recorded as `dest_tx_hash` and fed to the standard `SolanaVerifier`. Allbridge's public REST API doesn't expose a working transfer-status endpoint, so direct destination polling is the only reliable signal.
 
-### Stellar destination (when shipped)
+### Stellar destination
 
-Will use Soroban contract calls via `stellar-sdk` Python with a Stellar relayer wallet. The CCTP V2 path uses Circle's `CctpForwarder` contract — `mintRecipient` in the burn message must be the CctpForwarder address (NOT the merchant), and the real recipient is encoded in `hookData` as a UTF-8 strkey. USDC on Stellar uses 7 decimal precision (vs 6 on every other chain), so the destination mint scales the message amount by 10. AlgoVoi's verifier handles the scaling.
+The Allbridge route is settled by the destination-side scanner alone — no relayer wallet is required because Allbridge's own validator network releases USDC to the merchant's Stellar address on its own. The verifier polls Horizon, matches the Soroban USDC transfer, then writes the ledger row and flips the link to paid.
+
+The CCTP V2 path will use Circle's `CctpForwarder` contract via `stellar-sdk` Soroban calls — `mintRecipient` in the burn message is the CctpForwarder contract (NOT the merchant), and the real recipient is encoded in `hookData` as a UTF-8 strkey. USDC on Stellar uses 7 decimal precision (vs 6 on every other chain), so amounts are scaled `× 10` end-to-end. AlgoVoi's slippage tolerance helper applies the scaling automatically.
 
 ---
 
 ## Limitations
 
-- **Algorand mainnet and Solana mainnet only as of 2026-05.** Stellar mainnet is in development.
+- **Algorand, Solana, and Stellar mainnet supported as of 2026-05.** Stellar uses Allbridge Core today; CCTP V2 will be added once Circle ships Stellar mainnet contracts.
 - **USDC stablecoins only.** Native ALGO / SOL / XLM payments via xChain are not supported.
 - **MetaMask (or any injected `window.ethereum` provider).** WalletConnect is not supported on the xChain tab. Customers paying directly on the destination chain (without bridging) use the standard QR / Solana Pay / Stellar SEP-7 flow on the same checkout page.
 - **CCTP V2 chain coverage.** CCTP V2 is currently used for Solana destinations. Algorand and Stellar destinations route via Allbridge until/unless Circle deploys CCTP on those chains. The framework is protocol-agnostic per attempt, so flipping a destination to CCTP is a single-line config change once Circle ships.
@@ -267,7 +272,7 @@ Will use Soroban contract calls via `stellar-sdk` Python with a Stellar relayer 
 
 - [Algorand](/chains/algorand) — chain reference, memo binding, payout address requirements
 - [Solana](/chains/solana) — Solana Pay reference binding, SPL Token verification, payout requirements
-- [Stellar](/chains/stellar) — chain reference, memo binding (in development for xChain)
+- [Stellar](/chains/stellar) — chain reference, memo binding (xChain via Allbridge Core)
 - [Payment links](/concepts/payment-links) — how checkout links are created and managed
 - [Circle CCTP V2](https://developers.circle.com/cctp) — protocol specification
 - [Allbridge Core](https://allbridge.io) — fallback bridge for non-CCTP destinations

@@ -5,8 +5,8 @@ description: What shipped and when. Major releases, breaking changes, new chain 
 
 ## 2026-05-05
 
+- **Stellar xChain is now live on mainnet.** EVM USDC (Base, Arbitrum, Polygon, Optimism, Ethereum, BNB, Avalanche) → classic Stellar USDC at Circle's canonical issuer (`GA5ZSEJ…`), end-to-end in ~60–120s. Allbridge Core's swap-and-bridge route invokes a Soroban swap pool that auto-converts to canonical USDC and credits the merchant's `G…` Stellar address via a normal `account_credited` effect — **any Stellar wallet supports the asset**, no Soroban-aware wallet required. Migration 101 adds `'stellar'` to `xchain_destination_t`. Tenants flip via the dashboard's new xChain card on the Overview tab or `PATCH /internal/tenants/{id}/xchain`. Circle CCTP V2 will be added as a second protocol once Circle ships Stellar mainnet contracts publicly (currently testnet-only).
 - **Circle CCTP V2 Fast Transfer is now the default protocol for Solana xChain.** End-to-end EVM USDC → Solana settlement in ~50 seconds (faster than Allbridge's ~90-120s), zero pool slippage, native Circle USDC on both sides. Implemented as a new `bridge_protocol` field on `xchain_bridge_attempts` (migration 100) so Algorand keeps using Allbridge (Circle hasn't deployed CCTP on Algorand) while Solana auto-routes via CCTP. AlgoVoi runs a Solana relayer wallet that submits `receive_message` on Circle's MessageTransmitterV2 for each attested deposit; daemon auto-retries on transient failures. Allbridge stays available as a fallback if anyone ever wants to opt out.
-- **Stellar xChain — in development.** Soroban-aware integration begins next sprint. Will support both Allbridge Core (live mainnet today, delivers Soroban-wrapped USDC) and Circle CCTP V2 (testnet today, mainnet pending Circle's 2026 ship). Both protocols share the same xChain attempts pipeline; Stellar adds a destination, not a parallel system.
 
 ## 2026-05-04
 

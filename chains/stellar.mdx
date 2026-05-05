@@ -41,16 +41,16 @@ Stellar's `path_payment` and `fee_bump_transaction` operations are supported by 
 - [Freighter](https://freighter.app) (browser extension)
 - [Solar Wallet](https://solarwallet.io)
 
-## xChain — pay from MetaMask, settle on Stellar (in development)
+## xChain — pay from MetaMask, settle on Stellar
 
-Stellar xChain is queued for the next sprint. Once shipped, tenants on `stellar_mainnet` will get the xChain tab on every hosted checkout, letting customers holding USDC on EVM chains pay a Stellar checkout from MetaMask without installing a Stellar wallet.
+Stellar xChain is **live on mainnet** (since 2026-05-05). Tenants on `stellar_mainnet` get the xChain tab on every hosted checkout, letting customers holding USDC on EVM chains (Base, Arbitrum, Polygon, Optimism, Ethereum, BNB Chain, Avalanche) pay a Stellar checkout from MetaMask without ever installing a Stellar wallet.
 
-Two routing protocols planned:
+Two routing protocols:
 
-- **Allbridge Core** (live mainnet today) — delivers Soroban-wrapped USDC at contract `CCW67TSZ…`. Requires a Soroban-aware merchant wallet (Lobstr / Freighter / Hot / Albedo). ~90-120s.
-- **Circle CCTP V2** (testnet today, mainnet on Circle's 2026 roadmap) — will deliver classic Stellar USDC via Circle's `mint_and_forward` Soroban contract once Circle ships mainnet. ~50-90s, zero slippage.
+- **Allbridge Core** ✅ live mainnet — calls Allbridge's swap-and-bridge route, which invokes a Soroban swap pool that auto-converts to canonical Stellar USDC at Circle's classic issuer (`GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN`) and credits the merchant's Stellar address directly. **Any Stellar wallet supports this asset** — no Soroban-aware wallet required (Lobstr, Solar, Stellarport, LumenWallet, Freighter etc. all work). ~60-120s end-to-end.
+- **Circle CCTP V2** 🟡 awaiting Circle mainnet — will deliver native Circle USDC via `mint_and_forward` once Circle ships Stellar mainnet contracts publicly. ~50-90s, zero slippage. Code path is stubbed.
 
-Both protocols share the same xChain attempts pipeline; the merchant sets `xchain_destination_chain = 'stellar'` and a Stellar payout address (`G…` account or `C…` Soroban contract), and AlgoVoi picks the right bridge protocol per attempt.
+Both protocols share the same xChain attempts pipeline. The merchant sets `xchain_destination_chain = 'stellar'` (via dashboard or `PATCH /internal/tenants/{id}/xchain`) and provides a Stellar payout address (`G…` classic account); AlgoVoi picks the right bridge protocol per attempt and the destination-side scanner verifies delivery by polling Horizon for an `account_credited` effect against the merchant's address.
 
 See [xChain payments](/concepts/xchain) for the unified flow.
 
@@ -58,4 +58,4 @@ See [xChain payments](/concepts/xchain) for the unified flow.
 
 - [x402 protocol](/protocols/x402) for the payment protocol layer
 - [Concept: chains overview](/concepts/chains-overview) for cross-chain comparison
-- [xChain payments](/concepts/xchain) — pay Stellar checkouts from MetaMask (in development)
+- [xChain payments](/concepts/xchain) — pay Stellar checkouts from MetaMask (live via Allbridge Core)
