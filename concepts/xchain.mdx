@@ -276,3 +276,13 @@ The CCTP V2 path will use Circle's `CctpForwarder` contract via `stellar-sdk` So
 - [Payment links](/concepts/payment-links) — how checkout links are created and managed
 - [Circle CCTP V2](https://developers.circle.com/cctp) — protocol specification
 - [Allbridge Core](https://allbridge.io) — fallback bridge for non-CCTP destinations
+
+### Complementary facilitators in the x402 ecosystem
+
+AlgoVoi is one of several x402 facilitators. The choice between them is mostly about chain coverage and protocol depth:
+
+- [pay.sh](https://pay.sh) (Solana Foundation) — canonical x402/MPP CLI client + MCP server for Solana with biometric local signing. The AlgoVoi catalog at `/.well-known/pay-skills.json` is pay.sh-compatible and registered as an aggregator at [solana-foundation/pay#349](https://github.com/solana-foundation/pay/pull/349). pay.sh users can pay AlgoVoi-protected resources end-to-end with no AlgoVoi-specific client.
+- [Built on Stellar Facilitator](https://stellar.org/x402) (Stellar Foundation) — first-party Stellar x402 facilitator with sponsored fees via OpenZeppelin Relayer and ~5-second finality. Use this if you only need Stellar coverage and want the simplest hosted facilitator. AlgoVoi's Stellar path is **complementary**: it adds the cross-chain bridge layer (EVM USDC → classic Stellar USDC) and the same x402 endpoint also covers Algorand, VOI, Hedera, Solana, Base, and Tempo from a single integration.
+- [Coinbase Hosted Facilitator](https://docs.cdp.coinbase.com/x402#offload-your-infra) — Base-only, fee-free USDC settlement, official Coinbase-managed.
+
+For a fuller list of facilitators, clients, and registries, see the [x402 ecosystem directory](https://www.x402.org/ecosystem) or [Awesome x402](https://github.com/Merit-Systems/awesome-x402).
