@@ -11,7 +11,7 @@ Practically, AlgoVoi turns any web endpoint, agent, bot, or e-commerce store int
 
 What you get out of the box:
 
-- **Compliance from day one.** Multi-source sanctions screening (OFSI / OFAC / UN / EU, daily refresh). Public [`/compliance/attestation`](https://api.algovoi.co.uk/compliance/attestation) and [`/compliance/screen`](https://api.algovoi.co.uk/compliance/screen) endpoints any agent can call before paying. SHA-384 audit chain shipped to Object Lock storage. SAMLA-2018-s.20-tipping-off compliant by design — generic verdicts, never names a list.
+- **Compliance from day one.** Multi-source sanctions screening (OFSI / OFAC / UN / EU, daily refresh). Public [`/compliance/attestation`](https://api.algovoi.co.uk/compliance/attestation) and [`/compliance/screen`](https://api.algovoi.co.uk/compliance/screen) endpoints any agent can call before paying. SHA-256 hash chain across `audit_log`, `screening_hits`, and `compliance_events` — every row links to its predecessor, tampering breaks the chain. Off-VM Object Lock shipping with FCA / UK MLRs Reg 40(3) 7-year retention is on the roadmap. SAMLA-2018-s.20-tipping-off compliant by design — generic verdicts, never names a list.
 - **Agent-protocol native.** First-class support for [x402](/protocols/x402), [MPP](/protocols/mpp), [AP2](/protocols/ap2), [A2A v1.0](/protocols/a2a), and [Solana Actions](/protocols/solana-actions). First **compliance-aware [Bazaar](https://github.com/coinbase/x402/blob/main/docs/extensions/bazaar.mdx) facilitator** — every entry in our `/discovery/resources` carries embedded compliance metadata.
 - **One integration, seven chains.** Algorand, VOI, Hedera, Stellar, Base, Solana, and Tempo all sit behind the same gateway, the same API, and the same dashboard. Cross-chain (xChain) settlement so a customer holding USDC on any of seven EVM source chains can pay a destination-chain checkout from MetaMask.
 - **Direct settlement.** Funds land on-chain in your wallet. AlgoVoi never holds your money, so there is no platform float, no payout schedule, and no Stripe-style settlement delay.
@@ -41,7 +41,7 @@ What you get out of the box:
 | Sanctions screening | **OFSI / OFAC / UN / EU, daily refresh** | Limited disclosure | Basic AML | Stripe-managed |
 | Public compliance attestation | **`/compliance/attestation`** | Not exposed | Not exposed | Not exposed |
 | Pre-payment recipient screen | **`/compliance/screen` (SAMLA-compliant)** | None | None | None |
-| Audit chain | **SHA-384, Object Lock 7y** | Closed | Closed | Closed |
+| Audit chain | **SHA-256 in-DB chain across 3 tables** (Object Lock shipping on roadmap) | Closed | Closed | Closed |
 | Agent payment protocols | **x402, MPP, AP2, A2A** | None | None | None |
 | Bazaar discovery extension | **Compliance-aware facilitator** | Coinbase-operated | None | None |
 | Chains | **7 mainnets** | 4 | 60+ | 2 |
@@ -62,7 +62,7 @@ flowchart LR
   AlgoVoi -->|signed event + audit-chain link| Tenant
 ```
 
-There are three actors: your customer, your app, and the AlgoVoi gateway. The customer pays on-chain, your app asks AlgoVoi to verify the transaction, and AlgoVoi reads the chain — but before signing the webhook event back to you, the payer wallet is screened against our sanctions cache, the payment is added to the SHA-384 audit chain, and the verdict is recorded for due-diligence retrieval. All the chain-specific complexity (memo formats, asset IDs, RPC failover, CAIP-2 network IDs) and all the compliance machinery (sanctions feeds, KYB state, risk tiers, audit-chain shipping) sit inside the gateway. You never have to think about either.
+There are three actors: your customer, your app, and the AlgoVoi gateway. The customer pays on-chain, your app asks AlgoVoi to verify the transaction, and AlgoVoi reads the chain — but before signing the webhook event back to you, the payer wallet is screened against our sanctions cache, the payment is added to the SHA-256 hash chain across `audit_log`, `screening_hits`, and `compliance_events`, and the verdict is recorded for due-diligence retrieval. All the chain-specific complexity (memo formats, asset IDs, RPC failover, CAIP-2 network IDs) and all the compliance machinery (sanctions feeds, KYB state, risk tiers, audit chain) sit inside the gateway. You never have to think about either.
 
 ## What's next
 
