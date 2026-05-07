@@ -25,8 +25,10 @@ request CTA.
     onboardings escalate to EDD.
   </Card>
   <Card title="Sanctions screening" icon="magnifying-glass">
-    Wallet-level sanctions screening live (UK / EU / US / UN consolidated
-    lists, daily feed refresh). Name-level + PEP screening framework
+    Wallet-level sanctions screening live against UK (OFSI), US (OFAC
+    SDN), and EU Consolidated lists with daily feed refresh. UN
+    designations cascade through EU implementing regulations and are
+    screened transitively. Name-level + PEP screening framework
     defined; commercial data feed in preparation.
   </Card>
   <Card title="URL / IP screening" icon="filter">
@@ -162,7 +164,7 @@ documents are available under NDA.
     Risk dimensions, banding, decision overrides, re-scoring cadence.
   </Card>
   <Card title="Sanctions Screening Procedure" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/SANCTIONS_PROCEDURE.md">
-    UK / EU / US / UN coverage, match handling, OFSI reporting trigger.
+    UK / EU / US coverage (UN cascading via EU regs), match handling, OFSI reporting trigger.
   </Card>
   <Card title="PEP Screening Procedure" href="https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/blob/master/compliance/PEP_SCREENING_PROCEDURE.md">
     PEP definitions, FCA FG17/6 risk-based handling, EDD checklist.
@@ -194,7 +196,7 @@ behalf of a tenant whose mainnet access is not active. See [Concepts → KYC and
 | GitHub | Source code and CI |
 | Mintlify | Public docs hosting (this site) |
 | Let's Encrypt | TLS certificate issuance |
-| Sanctions list providers | UK / EU / US / UN data |
+| Sanctions list providers | UK (OFSI) / US (OFAC SDN) / EU Consolidated data |
 | Public RPC providers | On-chain verification |
 
 ## Reporting a vulnerability
