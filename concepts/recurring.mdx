@@ -1,0 +1,121 @@
+---
+title: Recurring payments
+description: Customer-signed subscription invoices. No mandate, no custodied keys, no autopay.
+---
+
+Recurr is AlgoVoi's recurring-payment layer. Every cycle, a fresh invoice is generated and emailed to the customer as a standard payment link. The customer pays from their own wallet, on their own schedule. AlgoVoi never holds keys or standing payment authority.
+
+## How it differs from direct debit
+
+| | Traditional direct debit | Recurr |
+|---|---|---|
+| Who holds payment authority | Bank / PSP | Nobody — customer pays each invoice |
+| Customer action per cycle | None (autopulled) | Click link, pay from wallet |
+| Missed payment | Silent retry | Dunning emails, then subscription paused |
+| Revocation | Contact merchant or bank | Customer clicks cancel link, instant |
+| AlgoVoi custody of funds | No | No |
+
+## Core model
+
+**Customers** — a wallet address associated with a tenant's merchant account. Identified by wallet, not email.
+
+**Subscriptions** — the billing schedule: amount, currency, chain, cadence, and a cancel secret. Cadence options are `daily`, `weekly`, `monthly`, `quarterly`, `annual`, or `custom` (fixed interval in days).
+
+**Invoices** — generated automatically at each cycle. Each invoice is a standard AlgoVoi payment link. When the customer pays on-chain, the invoice is marked paid and the next cycle is scheduled.
+
+## Supported chains
+
+All seven AlgoVoi networks: Algorand, VOI, Hedera, Stellar, Base, Solana, Tempo. Chain is set per subscription.
+
+## Creating a customer
+
+```bash
+curl -X POST https://api.algovoi.co.uk/v1/customers \
+  -H "Authorization: Bearer $ALGOVOI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "wallet_address": "CUSTOMER_WALLET",
+    "email": "customer@example.com"
+  }'
+```
+
+## Creating a subscription
+
+```bash
+curl -X POST https://api.algovoi.co.uk/v1/subscriptions \
+  -H "Authorization: Bearer $ALGOVOI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "uuid",
+    "amount_minor": 1000000,
+    "currency": "USDC",
+    "chain": "algorand_mainnet",
+    "cadence": "monthly",
+    "notify_lead_hours": 48
+  }'
+```
+
+`amount_minor` is in microunits (1,000,000 = 1.00 USDC). `notify_lead_hours` controls how early the invoice-ready email is sent before the due date.
+
+## Subscription lifecycle
+
+```
+active  →  cancelled   (operator cancel, customer self-cancel, or payment failure dunning limit)
+        →  paused      (operator pause)
+paused  →  active      (operator resume — next_due_at shifts forward by pause duration)
+```
+
+Cancellation can be immediate or `at_period_end` (keeps the subscription active until the current cycle resolves).
+
+## Customer self-cancel
+
+Every subscription has a `cancel_url` — a single-use link sent to the customer. Clicking it shows a confirmation page; submitting cancels immediately and rotates the secret so the link cannot be replayed.
+
+The cancel link is included in every invoice email. No login, no account, no friction.
+
+## Customer portal
+
+`recurr.algovoi.co.uk` is a wallet-connect portal where customers can view all their active subscriptions across every merchant who has billed that wallet, and cancel any of them. Supported wallets:
+
+- **EVM** (Base, Tempo): MetaMask
+- **Solana**: Phantom
+- **Algorand / VOI**: Pera, Defly, Lute
+- **Stellar**: Freighter, Albedo, xBull, LOBSTR
+- **Hedera**: HashPack, Blade, Kabila (via WalletConnect)
+
+## Hosted authorisation page (Tier 2)
+
+For Tier 2 standing authorities — where a pull executor draws on-chain on behalf of the customer — a one-time wallet signature is collected before the authority activates. The hosted page at `recurr.algovoi.co.uk/{signing_token}` guides the customer through:
+
+1. Resolve the token (validates it is unexpired and merchant context loads)
+2. Review the authority summary: merchant, amount cap, cadence, chain, expiry
+3. Connect wallet and sign the authority transaction
+4. Confirm — the backend activates the authority and notifies the merchant
+
+The signing token is single-use, has a 24-hour TTL, and is never logged. The page applies sanctions screening at confirm time (SAMLA 2018 s.20 compliant).
+
+## Dunning
+
+When an invoice is not paid within the cycle window, AlgoVoi's dunning worker sends follow-up emails on an exponential backoff schedule (1 day, 3 days, 7 days). After the configured maximum attempts, the subscription moves to `cancelled`.
+
+## Webhooks
+
+Recurr fires the standard [outbound webhook](/integrations/outbound-webhooks) events:
+
+| Event | Fired when |
+|---|---|
+| `subscription.created` | New subscription created |
+| `subscription.invoice.paid` | Customer pays an invoice |
+| `subscription.cancelled` | Subscription cancelled (any reason) |
+| `subscription.paused` | Subscription paused |
+| `subscription.resumed` | Subscription resumed |
+
+## Dashboard
+
+Subscriptions and customers are visible in the tenant dashboard under **Recurr**. Operators can create, pause, resume, and cancel subscriptions, and view invoice history per subscription.
+
+## See also
+
+- [Payment links](/concepts/payment-links) — the underlying mechanism each invoice uses
+- [Outbound webhooks](/integrations/outbound-webhooks) — event payload schema
+- [Notifications](/concepts/notifications) — human-readable payment alerts
