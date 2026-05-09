@@ -3,6 +3,32 @@ title: Changelog
 description: What shipped and when. Major releases, breaking changes, new chain support.
 ---
 
+## 2026-05-09
+
+- **Agent Trust Bench `/stats` now serves an HTML dashboard in browsers.** Visiting `agent-trust-bench.algovoi.co.uk/stats` in a browser renders a live stats page (bar charts by event type / profile, escalation funnel, top user-agent table, 30-second auto-refresh). API and agent clients receive the same JSON payload as before — content-negotiated on the `Accept` header.
+
+## 2026-05-08
+
+- **Recurr hosted authorisation page backend is live.** `recurr.algovoi.co.uk/{signing_token}` renders the wallet-connect signing flow for Tier 2 standing authorities. Supported wallets: Pera, Defly, and Lute (Algorand/VOI) via the official WalletConnect SDK; MetaMask / Rainbow / Coinbase Wallet (EVM — Base, Tempo); Phantom / Solflare (Solana); HashPack / Blade / Kabila (Hedera); Freighter / Albedo / LOBSTR (Stellar). Bundles served from `/opt/algovoi/recurr-hosted-page` via nginx bind-mount.
+
+## 2026-05-07
+
+- **Pre-sale security sweep complete.** 0 CRITICAL · 1 HIGH (deferred with documented mitigation) · 0 MEDIUM · 4 LOW across all platform components. Full data-room prepared at `content/`.
+
+## 2026-05-06
+
+- **Compliance attestation and screening endpoints live.**
+  - `GET /compliance/attestation` — machine-readable compliance status document (SAMLA 2018 s.20 compliant, PEP screening posture, sanctions controls, retention policy). Returned from `/discovery/resources` as a linked compliance statement — makes AlgoVoi the first compliance-aware Bazaar facilitator.
+  - `POST /compliance/screen` — real-time wallet sanctions screening against 7 threat-intel feeds before any payment is accepted. Returns a risk decision with structured rationale.
+- **Audit chain live.** Each payment event generates a SHA-384 hash-chained receipt, committed atomically to Postgres and archived to Backblaze B2 under Object Lock (COMPLIANCE mode, 7-year retention). The verifiable audit bundle is accessible at `GET /compliance/attestation` with a pointer to the public verifier repository.
+- **nginx permanent DNS-caching fix deployed.** Docker container restarts no longer cause 502 outages. nginx now uses `resolver 127.0.0.11 valid=10s` with variable upstreams — IPs are re-resolved from Docker's embedded DNS every 10 seconds rather than cached at startup.
+
+## 2026-05-05
+
+- **Checkout abandonment** — `POST /checkout/{token}/abandon` lets checkout pages signal an explicit user cancellation. All four platform adapters (OpenCart, WooCommerce, PrestaShop, Shopware) now call this endpoint on "Back" / close — merchants receive a `payment.cancelled` webhook event immediately instead of waiting for the checkout to time out.
+- **pay-skills catalog live** at `/.well-known/pay-skills.json`. AlgoVoi is the first multi-chain entry in the [solana-foundation/pay-skills](https://github.com/solana-foundation/pay-skills) registry, with provider entries for the Agent Trust Bench (`algovoi/agent-trust-bench`) and the compliance gate (`algovoi/compliance-gate`).
+- **CSP nonces across all public-facing pages.** Content-Security-Policy nonces added to all gateway-rendered HTML (checkout pages, x-connect widget, shop demo, signup, recurr hosted page, demo page). `style-src-attr: 'unsafe-inline'` retained for inline `style=` attributes; all other inline scripts are nonce-gated.
+
 ## 2026-05-05
 
 - **Stellar xChain is now live on mainnet.** EVM USDC (Base, Arbitrum, Polygon, Optimism, Ethereum, BNB, Avalanche) → classic Stellar USDC at Circle's canonical issuer (`GA5ZSEJ…`), end-to-end in ~60–120s. Allbridge Core's swap-and-bridge route invokes a Soroban swap pool that auto-converts to canonical USDC and credits the merchant's `G…` Stellar address via a normal `account_credited` effect — **any Stellar wallet supports the asset**, no Soroban-aware wallet required. Migration 101 adds `'stellar'` to `xchain_destination_t`. Tenants flip via the dashboard's new xChain card on the Overview tab or `PATCH /internal/tenants/{id}/xchain`. Circle CCTP V2 will be added as a second protocol once Circle ships Stellar mainnet contracts publicly (currently testnet-only).
@@ -22,6 +48,10 @@ description: What shipped and when. Major releases, breaking changes, new chain 
 - **MCP Server v1.2.0** — 11 tools → 13 tools. Added `fetch_agent_card` and `send_a2a_message` for A2A agent discovery and payment-gated calls from inside Claude, Cursor, and Windsurf. Published to npm and PyPI.
 - **Tempo RPC** — configurable via `ALGOVOI_TEMPO_RPC` env var (Alchemy endpoint); Base uses `https://mainnet.base.org`; Solana uses `https://api.mainnet-beta.solana.com`.
 - **Protocol adapters** (MPP v2.3.0, AP2 v2.1.0) — full EVM (`eth_getTransactionReceipt`) and Solana (`getTransaction`) on-chain verification added for Base, Solana, and Tempo.
+
+## 2026-05-03
+
+- **PQC Tier 2 — HMAC upgrade.** All internal service-to-service channels and outbound webhook signatures now support dual-version HMAC: v1 (SHA-256, existing) and v2 (SHA-384, new). New webhooks carry both `X-AlgoVoi-Signature-v1` and `X-AlgoVoi-Signature-v2` headers; verifiers can validate either. Sub-keys derived via HKDF — no key rotation required.
 
 ## 2026-04-25
 
