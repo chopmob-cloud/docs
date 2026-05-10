@@ -1,11 +1,11 @@
----
+﻿---
 title: x402 (HTTP 402 Payment Required)
 description: Charge per request for any HTTP endpoint. AlgoVoi is a multi-chain x402 facilitator across 7 chains.
 ---
 
 ## What is x402
 
-[x402](https://github.com/coinbase/x402) is Coinbase's open spec for paywalling HTTP endpoints. The flow is:
+[x402](https://github.com/x402-foundation/x402) is an open spec for paywalling HTTP endpoints, originated by Coinbase and now stewarded by the x402 Foundation. The flow is:
 
 1. Client calls a protected endpoint without payment.
 2. Server returns `HTTP 402 Payment Required` with a `payment_requirements` JSON body listing accepted networks, assets, amounts, and a receiving address.
@@ -48,7 +48,7 @@ Point your server's protected endpoint at the AlgoVoi gateway:
 
 ```http
 GET /v1/protected/premium-data
-Host: api1.ilovechicken.co.uk
+Host: api.algovoi.co.uk
 Authorization: Bearer <YOUR_API_KEY>
 X-Tenant-Id: <YOUR_TENANT_ID>
 ```

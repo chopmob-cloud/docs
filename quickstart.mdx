@@ -1,4 +1,4 @@
----
+﻿---
 title: Quickstart
 description: Take your first AlgoVoi payment in five minutes. Sign up, pick a chain, generate a checkout link, confirm settlement.
 ---
@@ -33,7 +33,7 @@ The payout address is **non-custodial**. AlgoVoi never holds the funds. They go 
 ## 3. Create a checkout link
 
 ```bash
-curl -X POST https://api1.ilovechicken.co.uk/v1/payment-links \
+curl -X POST https://api.algovoi.co.uk/v1/payment-links \
   -H "Authorization: Bearer $ALGOVOI_API_KEY" \
   -H "X-Tenant-Id: $TENANT_ID" \
   -H "Content-Type: application/json" \
@@ -49,7 +49,7 @@ You get back a `checkout_url`. Open it in a browser and you'll see a hosted page
 
 ```json
 {
-  "checkout_url": "https://api1.ilovechicken.co.uk/checkout/abc123",
+  "checkout_url": "https://api.algovoi.co.uk/checkout/abc123",
   "token": "abc123",
   "chain": "algorand-testnet",
   "amount_microunits": 1000000,

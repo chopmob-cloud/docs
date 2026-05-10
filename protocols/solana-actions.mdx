@@ -1,4 +1,4 @@
----
+﻿---
 title: Solana Actions and Blinks
 description: AlgoVoi exposes hosted checkouts as Solana Actions, callable from any Blink-aware client (dial.to, X, Discord).
 ---
@@ -12,9 +12,9 @@ AlgoVoi's hosted-checkout tokens are Solana Actions. Any Blink-aware client can 
 ## Live endpoint
 
 ```
-GET  https://api1.ilovechicken.co.uk/actions/checkout/{token}
-POST https://api1.ilovechicken.co.uk/actions/checkout/{token}
-GET  https://api1.ilovechicken.co.uk/actions.json
+GET  https://api.algovoi.co.uk/actions/checkout/{token}
+POST https://api.algovoi.co.uk/actions/checkout/{token}
+GET  https://api.algovoi.co.uk/actions.json
 ```
 
 The Cloudflare layer adds the required `X-Action-Version: 2.1.3` and `X-Blockchain-Ids` response headers automatically.

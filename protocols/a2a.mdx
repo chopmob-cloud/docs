@@ -1,4 +1,4 @@
----
+﻿---
 title: A2A (Agent2Agent Protocol)
 description: Google's open protocol for AI agents to discover and call each other. AlgoVoi is the only live multi-chain payment-gate A2A agent.
 ---
@@ -7,7 +7,7 @@ description: Google's open protocol for AI agents to discover and call each othe
 
 [Agent2Agent (A2A)](https://a2aproject.github.io/A2A) is Google's open protocol for AI agents from different vendors and frameworks to communicate. Each agent publishes an **Agent Card** at `/.well-known/agent.json` describing its capabilities, endpoints, and auth requirements. Clients discover the card, send a `Task`, and receive `Artifacts` back.
 
-AlgoVoi runs a live A2A v1.0 agent at [`api1.ilovechicken.co.uk/.well-known/agent.json`](https://api1.ilovechicken.co.uk/.well-known/agent.json) with three skills.
+AlgoVoi runs a live A2A v1.0 agent at [`api.algovoi.co.uk/.well-known/agent.json`](https://api.algovoi.co.uk/.well-known/agent.json) with three skills.
 
 ## When to use A2A
 
@@ -53,7 +53,7 @@ Poll a checkout link's status. Input: `token`. Output: `active`, `paid`, `expire
 ```typescript
 import { A2AClient } from "@a2a-protocol/sdk-js";
 
-const client = new A2AClient("https://api1.ilovechicken.co.uk");
+const client = new A2AClient("https://api.algovoi.co.uk");
 const card = await client.fetchAgentCard();
 
 const task = await client.sendTask({
@@ -76,11 +76,11 @@ As of 2026-04-22, AlgoVoi is **the only live A2A agent in the crypto-payments ec
 
 ## Production gateway only
 
-A2A skills run on the `api1.ilovechicken.co.uk` gateway, not on the cloud edge. They need direct facilitator and database access. Cloud endpoints proxy normal payment traffic, not A2A skills.
+A2A skills run on the `api.algovoi.co.uk` gateway, not on the cloud edge. They need direct facilitator and database access. Cloud endpoints proxy normal payment traffic, not A2A skills.
 
 ## See also
 
 - [AP2](/protocols/ap2) typically rides on A2A as its transport
 - [x402](/protocols/x402) is used as the payment leg inside A2A skills
 - The [A2A spec](https://a2aproject.github.io/A2A)
-- AlgoVoi's [agent card](https://api1.ilovechicken.co.uk/.well-known/agent.json) (live JSON)
+- AlgoVoi's [agent card](https://api.algovoi.co.uk/.well-known/agent.json) (live JSON)

@@ -1,4 +1,4 @@
----
+﻿---
 title: Payment links
 description: Hosted-checkout links. What they are, how to create them, and when to use them over x402.
 ---
@@ -27,7 +27,7 @@ Once paid, the link is locked. No further state transitions. The `payment_ledger
 ## Creating a link
 
 ```bash
-curl -X POST https://api1.ilovechicken.co.uk/v1/payment-links \
+curl -X POST https://api.algovoi.co.uk/v1/payment-links \
   -H "Authorization: Bearer $ALGOVOI_API_KEY" \
   -H "X-Tenant-Id: $TENANT_ID" \
   -H "Content-Type: application/json" \
@@ -45,7 +45,7 @@ Response:
 
 ```json
 {
-  "checkout_url": "https://api1.ilovechicken.co.uk/checkout/abc123",
+  "checkout_url": "https://api.algovoi.co.uk/checkout/abc123",
   "token": "abc123",
   "chain": "solana-mainnet",
   "amount_microunits": 5000000,
@@ -63,7 +63,7 @@ Default expiry is **30 minutes** from creation. Maximum is **7 days**. After exp
 ## Cancellation
 
 ```bash
-curl -X POST https://api1.ilovechicken.co.uk/checkout/{token}/cancel \
+curl -X POST https://api.algovoi.co.uk/checkout/{token}/cancel \
   -d '{"cancel_secret": "csK_abc…"}'
 ```
 
