@@ -77,6 +77,7 @@
             "pages": [
               "support",
               "security",
+              "agent-trust-bench",
               "incident-protocol",
               "compliance",
               "changelog",
