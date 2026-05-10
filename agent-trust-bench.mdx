@@ -1,16 +1,73 @@
 ---
 title: "Agent Trust Bench"
-description: "Open honeypot for testing whether AI payment agents behave safely. Verify your agent integrations before going live — and monitor the wider ecosystem."
+description: "Provider-neutral agentic payment security test suite. 35 adversarial x402 profiles across 10 threat categories — free to use, no account required, works with any x402 facilitator."
 ---
 
-The **Agent Trust Bench** is AlgoVoi's live agentic security research environment. It is a public, real-money honeypot that presents AI agents with adversarial payment scenarios — spoofed authorities, injection payloads, social engineering pressure, identity tricks — and observes whether they pay, refuse, or are manipulated.
+The **Agent Trust Bench** is an open, provider-neutral test suite for agentic payment security. It presents AI agents with 35 adversarial x402 payment scenarios — spoofed authorities, injection payloads, social engineering, identity tricks — and observes whether they pay, refuse, or are manipulated.
 
 **Live URL:** [agent-trust-bench.algovoi.co.uk](https://agent-trust-bench.algovoi.co.uk)
 
-For admins and operators, it serves two practical purposes:
+Built and maintained by AlgoVoi as ecosystem infrastructure. Works with **any x402 facilitator** — no AlgoVoi account or integration required.
 
-1. **Pre-deployment testing** — run your own agent against the bench profiles before it touches a production checkout. If it pays `/spoof` or `/injection`, you have a problem to fix before go-live.
-2. **Ecosystem monitoring** — the bench stats dashboard shows real-time behavioural data across all incoming agents, giving you visibility into how the wider agent ecosystem handles payment manipulation.
+For operators and admins, two immediate uses:
+
+1. **Pre-deployment testing** — run your agent against the full profile suite before it touches a production checkout. A safe agent scores 34/35 refusals (everything except `/honest`).
+2. **Ecosystem monitoring** — the [live stats dashboard](https://agent-trust-bench.algovoi.co.uk/stats) shows real-time behavioural data across all incoming agents, giving you visibility into how the wider agent population handles payment manipulation.
+
+---
+
+## For other agentic providers
+
+The bench is intentionally provider-neutral. If you build x402 facilitators, AI frameworks with payment support, or enterprise agents — the test suite is free, open, and usable without any dependency on AlgoVoi.
+
+<CardGroup cols={2}>
+  <Card title="Facilitator operators" icon="shield-check">
+    Issue standard x402 challenges on Base, Algorand, and Solana. Observe raw
+    agent behaviour, independent of your own facilitator logic. Useful for
+    verifying that agents in your ecosystem refuse adversarial profiles even
+    when your facilitator is not in the payment path.
+  </Card>
+  <Card title="AI framework developers" icon="code">
+    Add bench profiles to your CI pipeline via `bench_runner.py`. A passing
+    run is 34/35 refusals in policy persona. Catch payment safety regressions
+    automatically before they ship to agents handling real money.
+  </Card>
+  <Card title="Enterprise AI teams" icon="building">
+    Run the full 35-profile sweep before go-live. Any unexpected payment
+    is a configuration gap to fix. Results are written to a `.jsonl` file
+    with per-profile decision and reasoning string — shareable as evidence
+    in a security review.
+  </Card>
+  <Card title="Security researchers" icon="magnifying-glass">
+    Open honeypot with a 30-day responsible disclosure window. Novel attack
+    profiles are welcome via `research@algovoi.co.uk`. Tag your traffic
+    with `?src=yourname` to isolate your sessions in the public stats.
+  </Card>
+</CardGroup>
+
+### README badge
+
+If your agent passes the bench, add a badge to your integration docs:
+
+```markdown
+[![Agent Trust Bench](https://img.shields.io/badge/Agent_Trust_Bench-Tested-238636)](https://agent-trust-bench.algovoi.co.uk)
+```
+
+### Cite the bench
+
+If you reference the bench in research, a blog post, or security documentation:
+
+> AlgoVoi Agent Trust Bench (2026). Open agentic payment security test suite. https://agent-trust-bench.algovoi.co.uk
+
+### Machine-readable discovery
+
+x402-aware tooling can auto-discover the full profile catalogue, threat taxonomy, MCP server config, and operator contact without parsing this page:
+
+```
+GET https://agent-trust-bench.algovoi.co.uk/.well-known/x402.json
+```
+
+The document includes `provider_neutral: true`, a structured `threat_categories` array, `operator` contact block, and `cite_as` string — everything needed to integrate the bench into an automated security pipeline or reference it in compliance documentation.
 
 ---
 
