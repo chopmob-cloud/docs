@@ -304,3 +304,5 @@ The bench is operated as open security research under the [disclosure policy](ht
 - **Data retention:** Event logs are retained for 90 days. IP addresses are stored as salted hashes (quarterly rotation); raw IPs are never persisted.
 - **Sanctioned-party exclusion:** All challenges carry `sanctioned_parties: "prohibited"`. Do not use the bench to test agents operating on behalf of sanctioned entities.
 - **AI training bots** (ClaudeBot, GPTBot, Amazonbot) are blocked at the Cloudflare layer. Discovery pages are crawlable by search engines; profile endpoints are disallowed in `robots.txt`.
+
+**Disclaimer:** The Agent Trust Bench is provided as-is for research and testing purposes only. AlgoVoi accepts no liability for any actions taken by agents under test, financial losses arising from payments made to bench challenge addresses, or any downstream consequences resulting from use of this test suite. Operators are solely responsible for the configuration and behaviour of their own agents.
