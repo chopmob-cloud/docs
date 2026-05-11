@@ -32,7 +32,24 @@ EVM-compatible wallets work, configured for the Tempo network:
 - [Rabby](https://rabby.io)
 - [WalletConnect](https://walletconnect.com)
 
+## AgentCash
+
+[AgentCash](https://agentcash.dev) is the reference MPP client for Tempo. It manages a USDCe wallet on Tempo mainnet, resolves `WWW-Authenticate: Payment` challenges automatically, and broadcasts signed transactions — no configuration needed.
+
+```bash
+# Install and fund
+npm install -g agentcash   # or use npx
+npx agentcash deposit      # get your wallet address and top up with USDCe
+
+# Call any AlgoVoi MPP endpoint
+npx agentcash fetch https://api.algovoi.co.uk/mpp/probe -m GET
+npx agentcash fetch https://api.algovoi.co.uk/mpp/{tenant_short_id}/{resource_id} -m GET
+```
+
+Payments settle on Tempo in about 2 seconds. The AlgoVoi gateway accepts the resulting transaction hash, verifies it on-chain, and returns a JWT receipt.
+
 ## See also
 
 - [Base](/chains/base) for the other EVM chain we support
 - [x402 protocol](/protocols/x402) for the payment protocol layer
+- [MPP protocol](/protocols/mpp) for method-level paywalls and AgentCash integration

@@ -38,6 +38,63 @@ AlgoVoi is registered in the public MPP services catalogue at [`mpp.dev`](https:
 
 Both protocols speak the same `Authorization: Payment` scheme on the wire. AlgoVoi accepts either on the same gateway.
 
+## AgentCash
+
+[AgentCash](https://agentcash.dev) is the reference CLI client for MPP over Tempo mainnet. It holds a USDCe wallet, handles the full challenge-pay-retry loop, and needs no API key or configuration to call any AlgoVoi-hosted MPP resource.
+
+### Discover and call with one command
+
+```bash
+# Discover what's available at the gateway
+npx agentcash try https://api.algovoi.co.uk
+
+# Pay a specific tenant resource (no API key needed)
+npx agentcash fetch https://api.algovoi.co.uk/mpp/{tenant_short_id}/{resource_id} -m GET
+```
+
+### Deposit funds
+
+```bash
+npx agentcash deposit
+# Deposits USDCe to your AgentCash wallet address on Tempo mainnet
+```
+
+A successful payment returns a signed JWT receipt in the response body:
+
+```json
+{
+  "verified": true,
+  "resource_id": "mpp-test-tempo",
+  "access_token": "eyJhbGci...",
+  "network": "tempo"
+}
+```
+
+### Per-tenant discovery spec
+
+Each tenant that has enabled public MPP access exposes a machine-readable resource list:
+
+```
+GET https://api.algovoi.co.uk/openapi-mpp/{tenant_short_id}.json
+```
+
+AgentCash and MPPScan can use this to enumerate all payable resources for that merchant.
+
+## Keyless public route
+
+AlgoVoi supports a **keyless public MPP route** — no `X-Tenant-Id` or `X-API-Key` required. The payment proof is the auth.
+
+```
+GET /mpp/{tenant_short_id}/{resource_id}
+```
+
+Tenants must opt in to this route (operators set `mpp_public_enabled` in the dashboard). When a tenant is not enabled or a resource doesn't exist, the response is a cloaked 404 regardless of the reason.
+
+| Route | Auth |
+| --- | --- |
+| `GET /mpp/{resource_id}` | `X-Tenant-Id` + `X-API-Key` (server-to-server) |
+| `GET /mpp/{tenant_short_id}/{resource_id}` | `Authorization: Payment` proof only — no API key |
+
 ## Quickstart
 
 ### 1. Register your service
@@ -99,8 +156,11 @@ A single MPP service can charge different prices for different methods:
 
 Same matrix as [x402](/protocols/x402). All 7 chains supported through the same gateway, configured per-tenant in the dashboard.
 
+For Tempo mainnet specifically, the AgentCash CLI provides a zero-config payer experience — see [Tempo](/chains/tempo).
+
 ## See also
 
 - [x402](/protocols/x402) for HTTP endpoints
 - [AP2](/protocols/ap2) for Google's mandate-based agent commerce
 - [A2A](/protocols/a2a) for x402 over the Agent-to-Agent transport
+- [Tempo chain](/chains/tempo) for USDCe TIP-20 details
