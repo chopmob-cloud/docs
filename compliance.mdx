@@ -187,6 +187,44 @@ screening data feed in preparation, applies equally once live). AI
 agents inherit their tenant's risk tier; an agent cannot transact on
 behalf of a tenant whose mainnet access is not active. See [Concepts → KYC and mainnet](/concepts/kyc-and-mainnet).
 
+## Transaction retention & tamper-evident audit chain
+
+AlgoVoi maintains five hash-chained audit logs. Every row in each chain receives a `chain_position`, a `content_hash` (SHA-256 of the RFC-8785 canonical JSON of its immutable fields), and a `prev_hash` linking it to the previous row. An advisory lock serialises concurrent inserts, preventing chain forks.
+
+| Chain | What it covers |
+|---|---|
+| `audit_log` | Admin and operator actions, access events |
+| `screening_hits` | Wallet sanctions / PEP screening outcomes |
+| `compliance_events` | KYC / KYB state transitions |
+| `negotiation_trace_events` | x402 / MPP / A2A negotiation protocol traces |
+| `payment_ledger` | Every verified payment across all 7 chains and both MPP routes |
+
+### B2 Object Lock shipping
+
+A background reaper runs every ~5 minutes and batches newly chained rows for each chain into NDJSON files:
+
+```
+payment_ledger/000000001-000000250-<batch-sha256>.ndjson
+audit_log/000000001-000000500-<batch-sha256>.ndjson
+```
+
+Files are written to Backblaze B2 in **COMPLIANCE mode** Object Lock — the provider cannot delete or shorten the retention period even on operator request. Retention is set to **7 years** (UK MLRs Reg 40 requires a minimum of 5 years).
+
+### What is locked in each payment record
+
+For every MPP, x402, A2A, or checkout payment, the following fields are cryptographically sealed in the chain hash at the moment the payment is recorded:
+
+- `tenant_id` — the merchant whose resource was paid
+- `resource_id` — the specific resource or checkout token
+- `tx_id` — on-chain transaction identifier
+- `chain` and `asset_id` — the blockchain and token used
+- `amount_microunits` — payment amount at capture time
+- `verified_at` — UTC timestamp of verification
+- `payer_address` — the sender wallet at time of recording
+- `status` — `verified`
+
+These fields cannot be altered post-insert without breaking the chain, and the WORM copy in B2 is permanent. GDPR erasure of `payer_address` applies to the live Postgres copy after 90 days; the B2 COMPLIANCE-mode copy is outside the erasure scope per legitimate legal obligation under UK MLRs.
+
 ## Subprocessors
 
 | Vendor | Purpose |

@@ -158,6 +158,44 @@ Same matrix as [x402](/protocols/x402). All 7 chains supported through the same 
 
 For Tempo mainnet specifically, the AgentCash CLI provides a zero-config payer experience — see [Tempo](/chains/tempo).
 
+## Audit trail & B2 retention
+
+Every MPP payment — regardless of which route or client is used — is recorded in the `payment_ledger` table and shipped to Backblaze B2 Object Lock storage. Both paths converge on the same internal function before any response is returned.
+
+| Route | Client | Storage path |
+| --- | --- | --- |
+| `GET /mpp/{resource_id}` with `X-Tenant-Id` + `X-API-Key` | Server-to-server (native code, SDK) | `payment_ledger` → B2 |
+| `GET /mpp/{tenant_short_id}/{resource_id}` with `Authorization: Payment` | AgentCash, MPP clients (no API key) | `payment_ledger` → B2 |
+
+### Hash chain
+
+Each `PaymentLedgerEntry` row receives three tamper-evidence fields at insert time:
+
+| Field | Description |
+| --- | --- |
+| `chain_position` | Monotonically increasing sequence across all MPP payments |
+| `content_hash` | SHA-256 of the RFC-8785 canonical JSON of the row's immutable fields |
+| `prev_hash` | `content_hash` of the previous row (64 zeros for the first row) |
+
+The canonical payload locked into each hash includes: `tenant_id`, `resource_id`, `tx_id`, `chain`, `asset_id`, `amount_microunits`, `verified_at`, `payer_address`, and `status`. These fields cannot be altered post-insert without breaking the chain.
+
+### B2 Object Lock shipping
+
+A background reaper (running every ~5 minutes) batches new chained rows and ships them to B2:
+
+```
+payment_ledger/000000001-000000250-<batch-sha256>.ndjson
+```
+
+Each `.ndjson` file contains the full canonical payload for every row in the batch, including `content_hash` and `prev_hash`, so external auditors can independently recompute and verify the chain. Files are written in **COMPLIANCE mode** Object Lock — immutable and undeletable for 7 years.
+
+### What this means for your integration
+
+- **Keyless (AgentCash) payments**: the `payer_address` of the AgentCash wallet is captured in the B2 record at the moment of payment. GDPR erasure after 90 days applies to the live database copy; the WORM copy is permanent per UK MLRs Reg 40.
+- **Key-authenticated payments**: same guarantee — the calling tenant and the on-chain `tx_id` are cryptographically bound to the tenant's `tenant_id` in the chain.
+- **Dispute resolution**: tenants can request the B2 batch files for any time range from `security@algovoi.co.uk`. The batch SHA-256 is recorded in `audit_chain_shipments` for cross-reference.
+- **Regulatory retention**: minimum 5 years per UK MLRs Reg 40; AlgoVoi retains for 7 years (aligned with HMRC standard).
+
 ## See also
 
 - [x402](/protocols/x402) for HTTP endpoints
