@@ -212,6 +212,55 @@ Decoded `request` object:
 
 For AgentCash (Tempo mainnet), the CLI handles the full challenge-pay-retry loop automatically — see [AgentCash](#agentcash) above.
 
+## Subscriptions — `intent="subscription"`
+
+In addition to per-call charges (`intent="charge"`), MPP supports **subscription intent** — a one-time authority tx that grants AlgoVoi standing permission to pull a fixed amount each period.
+
+### How it differs from per-call charges
+
+| | `intent="charge"` | `intent="subscription"` |
+|---|---|---|
+| Payment per call | Yes — agent pays each time | No — authority is granted once |
+| Agent involvement after setup | Every call | None — AlgoVoi pulls autonomously |
+| On-chain tx | Payment tx | Authority (approve/allowance) tx |
+| Use case | Metered API calls | Periodic tool access, data feeds |
+
+### Subscription challenge
+
+When a resource is configured for subscription billing, the gateway returns a `402` with subscription fields:
+
+```http
+HTTP/1.1 402 Payment Required
+WWW-Authenticate: Payment realm="api.algovoi.co.uk" method="algorand"
+  intent="subscription"
+  periodCount="1" periodUnit="month"
+  subscriptionExpires="2027-05-12T00:00:00Z"
+  amount="5000000" asset="31566704"
+  receiver="ALGOVOI_WALLET"
+  nonce="..." expires="..." request="<base64url>"
+```
+
+The agent signs an on-chain authority tx, then re-submits with `Authorization: Payment`. AlgoVoi confirms the tx is on-chain (typically within 60 seconds), activates the subscription, and returns a `subscriptionId`.
+
+### Subscription routes
+
+| Route | Auth | Purpose |
+|---|---|---|
+| `GET /mpp/sub/{resource_id}` | `X-Tenant-Id` + `X-API-Key` | Server-to-server subscription setup |
+| `GET /mpp/sub/{tenant_short_id}/{resource_id}` | `Authorization: Payment` only | Keyless agent subscription setup |
+
+### Lifecycle
+
+```
+pending  →  active     (activation reaper confirms authority tx on-chain; ≤60s)
+         →  expired    (authority tx not found within 24h)
+active   →  cancelled  (operator or agent request)
+```
+
+Once `active`, AlgoVoi's pull reaper fires every 120 seconds and executes each due pull autonomously. The agent receives no further prompts.
+
+See [Recurring payments — MPP subscriptions](/concepts/recurring#mpp-subscriptions-agent-native-standing-authority) for the full lifecycle, wire format, and resource setup details.
+
 ## Audit trail & B2 retention
 
 Every MPP payment — regardless of which route or client is used — is recorded in the `payment_ledger` table and shipped to Backblaze B2 Object Lock storage. Both paths converge on the same internal function before any response is returned.

@@ -1,33 +1,42 @@
-﻿---
+---
 title: Recurring payments
-description: Customer-signed subscription invoices. No mandate, no custodied keys, no autopay.
+description: Two models — human-authorised invoice subscriptions (Recurr) and agent-native standing-authority subscriptions (MPP).
 ---
 
-Recurr is AlgoVoi's recurring-payment layer. Every cycle, a fresh invoice is generated and emailed to the customer as a standard payment link. The customer pays from their own wallet, on their own schedule. AlgoVoi never holds keys or standing payment authority.
+AlgoVoi supports two distinct recurring-payment models. Choose based on who is paying — a human customer or an AI agent.
 
-## How it differs from direct debit
-
-| | Traditional direct debit | Recurr |
+| | Recurr | MPP subscriptions |
 |---|---|---|
-| Who holds payment authority | Bank / PSP | Nobody — customer pays each invoice |
-| Customer action per cycle | None (autopulled) | Click link, pay from wallet |
-| Missed payment | Silent retry | Dunning emails, then subscription paused |
-| Revocation | Contact merchant or bank | Customer clicks cancel link, instant |
-| AlgoVoi custody of funds | No | No |
+| Who pays | Human, from their own wallet | AI agent, autonomously |
+| Auth model | Invoice email each cycle — customer pays manually | One-time on-chain authority tx; AlgoVoi pulls each period |
+| Setup | Customer portal or hosted auth page | Agent posts credential after receiving 402 challenge |
+| Cadence options | daily / weekly / monthly / quarterly / annual / custom | Any `day` / `week` / `month` interval |
+| AlgoVoi custody | None | None — authority tx grants bounded pull rights per chain |
+| Spec | AlgoVoi proprietary | [paymentauth.org MPP](https://mpp.dev) `intent="subscription"` |
+| Status | Tier 1 live; Tier 2 pull infra deployed | Live |
 
-## Core model
+---
 
-**Customers** — a wallet address associated with a tenant's merchant account. Identified by wallet, not email.
+## Recurr — human-facing invoice subscriptions
 
-**Subscriptions** — the billing schedule: amount, currency, chain, cadence, and a cancel secret. Cadence options are `daily`, `weekly`, `monthly`, `quarterly`, `annual`, or `custom` (fixed interval in days).
+Recurr generates a fresh payment link each billing cycle and delivers it to the customer. The customer pays from their own wallet. AlgoVoi never holds keys or standing authority.
 
-**Invoices** — generated automatically at each cycle. Each invoice is a standard AlgoVoi payment link. When the customer pays on-chain, the invoice is marked paid and the next cycle is scheduled.
+### How it works
 
-## Supported chains
+1. Merchant creates a customer (wallet address) and a subscription (amount, chain, cadence)
+2. Each cycle, Recurr generates a standard payment link and emails it to the customer
+3. Customer clicks the link and pays on-chain — same flow as any AlgoVoi checkout
+4. Recurr marks the invoice paid and schedules the next cycle
 
-All seven AlgoVoi networks: Algorand, VOI, Hedera, Stellar, Base, Solana, Tempo. Chain is set per subscription.
+### Subscription lifecycle
 
-## Creating a customer
+```
+active  →  cancelled   (operator cancel, customer self-cancel, or dunning limit reached)
+        →  paused      (operator pause)
+paused  →  active      (operator resume; next_due_at shifts forward by pause duration)
+```
+
+### Creating a customer
 
 ```bash
 curl -X POST https://api.algovoi.co.uk/v1/customers \
@@ -39,7 +48,7 @@ curl -X POST https://api.algovoi.co.uk/v1/customers \
   }'
 ```
 
-## Creating a subscription
+### Creating a subscription
 
 ```bash
 curl -X POST https://api.algovoi.co.uk/v1/subscriptions \
@@ -57,25 +66,17 @@ curl -X POST https://api.algovoi.co.uk/v1/subscriptions \
 
 `amount_minor` is in microunits (1,000,000 = 1.00 USDC). `notify_lead_hours` controls how early the invoice-ready email is sent before the due date.
 
-## Subscription lifecycle
+### Dunning
 
-```
-active  →  cancelled   (operator cancel, customer self-cancel, or payment failure dunning limit)
-        →  paused      (operator pause)
-paused  →  active      (operator resume — next_due_at shifts forward by pause duration)
-```
+When an invoice is unpaid past the cycle window, Recurr sends follow-up emails on an exponential backoff schedule (1 day, 3 days, 7 days). After the configured maximum attempts the subscription moves to `cancelled`.
 
-Cancellation can be immediate or `at_period_end` (keeps the subscription active until the current cycle resolves).
+### Customer self-cancel
 
-## Customer self-cancel
+Every subscription includes a `cancel_url` — a single-use link in every invoice email. Clicking it shows a confirmation page; submitting cancels immediately and rotates the secret so the link cannot be replayed. No login required.
 
-Every subscription has a `cancel_url` — a single-use link sent to the customer. Clicking it shows a confirmation page; submitting cancels immediately and rotates the secret so the link cannot be replayed.
+### Customer portal
 
-The cancel link is included in every invoice email. No login, no account, no friction.
-
-## Customer portal
-
-`recurr.algovoi.co.uk` is a wallet-connect portal where customers can view all their active subscriptions across every merchant who has billed that wallet, and cancel any of them. Supported wallets:
+`recurr.algovoi.co.uk` lets customers connect a wallet and view or cancel all subscriptions across every merchant that has billed that wallet. Supported wallets:
 
 - **EVM** (Base, Tempo): MetaMask
 - **Solana**: Phantom
@@ -83,24 +84,7 @@ The cancel link is included in every invoice email. No login, no account, no fri
 - **Stellar**: Freighter, Albedo, xBull, LOBSTR
 - **Hedera**: HashPack, Blade, Kabila (via WalletConnect)
 
-## Hosted authorisation page (Tier 2)
-
-For Tier 2 standing authorities — where a pull executor draws on-chain on behalf of the customer — a one-time wallet signature is collected before the authority activates. The hosted page at `recurr.algovoi.co.uk/{signing_token}` guides the customer through:
-
-1. Resolve the token (validates it is unexpired and merchant context loads)
-2. Review the authority summary: merchant, amount cap, cadence, chain, expiry
-3. Connect wallet and sign the authority transaction
-4. Confirm — the backend activates the authority and notifies the merchant
-
-The signing token is single-use, has a 24-hour TTL, and is never logged. The page applies sanctions screening at confirm time (SAMLA 2018 s.20 compliant).
-
-## Dunning
-
-When an invoice is not paid within the cycle window, AlgoVoi's dunning worker sends follow-up emails on an exponential backoff schedule (1 day, 3 days, 7 days). After the configured maximum attempts, the subscription moves to `cancelled`.
-
-## Webhooks
-
-Recurr fires the standard [outbound webhook](/integrations/outbound-webhooks) events:
+### Webhooks
 
 | Event | Fired when |
 |---|---|
@@ -110,12 +94,118 @@ Recurr fires the standard [outbound webhook](/integrations/outbound-webhooks) ev
 | `subscription.paused` | Subscription paused |
 | `subscription.resumed` | Subscription resumed |
 
-## Dashboard
+---
 
-Subscriptions and customers are visible in the tenant dashboard under **Recurr**. Operators can create, pause, resume, and cancel subscriptions, and view invoice history per subscription.
+## MPP subscriptions — agent-native standing authority
+
+MPP subscriptions are designed for AI agents paying for resources autonomously. They follow the [paymentauth.org MPP spec](https://mpp.dev) with `intent="subscription"`, meaning the full lifecycle — authorisation, activation, and periodic pulls — happens without human intervention.
+
+### How it works
+
+1. **Challenge** — the agent calls a subscription resource and receives a `402` with an MPP challenge:
+   ```
+   WWW-Authenticate: Payment protocol="MPP" intent="subscription"
+     periodCount=1 periodUnit="month"
+     subscriptionExpires="2027-05-12T00:00:00Z"
+     ...
+   ```
+
+2. **Authority tx** — the agent signs an on-chain transaction that grants AlgoVoi permission to pull `amount` each period. This is an approve/allowance tx (not a payment tx).
+
+3. **Credential post** — the agent re-submits the request with `Authorization: Payment` containing the authority tx ID and signed proof.
+
+4. **Activation** — AlgoVoi's activation reaper confirms the authority tx is on-chain (via `verify_authority_tx` per-chain), then transitions the subscription `pending → active`. Returns a `subscriptionId`.
+
+5. **Autonomous pulls** — AlgoVoi's pull reaper fires every 120 seconds, finds active subscriptions where `next_due_at ≤ now`, executes the on-chain pull, and advances `next_due_at` by the agreed period.
+
+### Resource setup
+
+Mark a resource as a subscription when creating or updating it via the API:
+
+```bash
+curl -X POST https://api.algovoi.co.uk/v1/resources \
+  -H "Authorization: Bearer $ALGOVOI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "premium-data-feed",
+    "price_minor": 5000000,
+    "currency": "USDC",
+    "chain": "algorand_mainnet",
+    "is_subscription": true,
+    "sub_period_count": 1,
+    "sub_period_unit": "month"
+  }'
+```
+
+`sub_period_unit` accepts `day`, `week`, or `month`.
+
+### Wire format
+
+An MPP subscription challenge looks like this:
+
+```
+HTTP/1.1 402 Payment Required
+WWW-Authenticate: Payment protocol="MPP" version="1.0"
+  intent="subscription"
+  network="algorand_mainnet"
+  receiver="ALGOVOI_WALLET"
+  amount="5000000"
+  asset="31566704"
+  periodCount="1"
+  periodUnit="month"
+  subscriptionExpires="2027-05-12T00:00:00Z"
+  nonce="..."
+  expires="..."
+  request="<base64url-encoded RequestObject>"
+```
+
+When the agent posts a valid credential, the gateway returns:
+
+```json
+{
+  "subscriptionId": "uuid",
+  "status": "pending",
+  "nextDueAt": "2026-06-12T12:00:00Z"
+}
+```
+
+Status transitions to `active` once the activation reaper confirms the authority tx (typically within 60 seconds).
+
+### Subscription lifecycle
+
+```
+pending  →  active     (activation reaper confirms authority tx on-chain)
+         →  expired    (authority tx not found within 24h TTL)
+active   →  cancelled  (operator cancel or agent request)
+```
+
+### Supported chains
+
+All 7 AlgoVoi chains support MPP subscriptions: Algorand, VOI, Hedera, Stellar, Base (EVM), Solana, Tempo (EVM).
+
+### Key differences from Recurr
+
+- No emails, no dunning, no customer portal — fully autonomous
+- The authority tx is a one-time on-chain approval; subsequent pulls need no agent involvement
+- The agent receives a `subscriptionId` it can reference to check status or request cancellation
+- Designed for the agent-to-agent and agent-to-service payment use case
+
+---
+
+## Choosing between the two models
+
+**Use Recurr when:**
+- Customers are humans who expect to review and approve each payment
+- You want dunning, email notifications, and a self-service cancel page
+- The subscription is between a merchant and an end customer
+
+**Use MPP subscriptions when:**
+- The payer is an AI agent operating autonomously
+- You are building a tool or resource priced per period in an MCP/RPC context
+- You want zero human friction and fully autonomous billing
 
 ## See also
 
-- [Payment links](/concepts/payment-links) — the underlying mechanism each invoice uses
+- [MPP protocol](/protocols/mpp) — the full MPP wire protocol and discovery spec
+- [Payment links](/concepts/payment-links) — how Recurr invoices work under the hood
 - [Outbound webhooks](/integrations/outbound-webhooks) — event payload schema
-- [Notifications](/concepts/notifications) — human-readable payment alerts
