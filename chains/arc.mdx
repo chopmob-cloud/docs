@@ -1,0 +1,79 @@
+---
+title: ARC Network
+description: USDC-native EVM L1 with onchain agent identity (ERC-8004) and job settlement (ERC-8183). Testnet live; mainnet coming.
+---
+
+## At a glance
+
+| | ARC Testnet |
+| --- | --- |
+| Network ID | `arc_testnet` |
+| Chain ID | `5042002` |
+| RPC | `https://rpc.testnet.arc.network` |
+| Native asset | USDC |
+| Native decimals | 18 |
+| Stablecoin | USDC (native — same token as gas) |
+| Stablecoin address | `0x3600000000000000000000000000000000000000` |
+| Stablecoin decimals | 18 on-chain (AlgoVoi converts internally) |
+| Confirmation time | ~2 seconds |
+| Typical fee | Paid in USDC (sub-cent on testnet) |
+| Mainnet | Not yet live — testnet only as of 2026-05 |
+
+<Info>
+ARC is purpose-built for programmable money. USDC is the **native gas token** — you pay transaction fees in USDC, not in a separate ETH-like asset. This eliminates the dual-token gas problem common on other chains.
+</Info>
+
+## Amount-only binding
+
+ARC is EVM-compatible. Like [Base](/chains/base) and [Tempo](/chains/tempo), ERC-20 transfers carry no memo field, so AlgoVoi binds checkouts by amount uniqueness. Send the exact `amount_microunits` from the checkout response and do not round.
+
+## USDC decimals — important
+
+On-chain ARC USDC uses **18 decimal places** (unlike 6 dp on every other chain). AlgoVoi's verifier handles this scaling automatically — amounts in the API and checkout response are always in the standard 6 dp micro-unit format. You never need to scale yourself.
+
+## Wallets
+
+Any EVM wallet works, configured for ARC Testnet:
+
+- [MetaMask](https://metamask.io) — add network manually (chain ID `5042002`, RPC `https://rpc.testnet.arc.network`)
+- [Rabby](https://rabby.io)
+- [WalletConnect](https://walletconnect.com)
+
+Fund testnet wallets at [faucet.circle.com](https://faucet.circle.com) — select **ARC Testnet**.
+
+## ERC-8004 onchain agent identity
+
+ARC defines [ERC-8004](https://docs.arc.network/build/agentic-economy), a standard for registering AI agents as onchain identities with reputation and credential verification.
+
+AlgoVoi is registered on ARC Testnet as an ERC-8004 agent:
+
+| | |
+| --- | --- |
+| Registry | `0x8004A818BFB912233c491871b3d84c89A494BD9e` |
+| Reputation registry | `0x8004B663056A597Dffe9eCcC1965A193B7388713` |
+| Validation registry | `0x8004Cb1BF31DAf7788923b405b754f57acEB4272` |
+| Metadata URI | `https://api.algovoi.co.uk/.well-known/agent.json` |
+| Reputation tag | `a2a_payment_gateway` |
+| Validation tag | `a2a_verified` |
+
+This makes AlgoVoi discoverable as a payment agent within ARC's agentic economy — any resolver that reads the ERC-721 tokenURI finds our A2A endpoint, compliance attestation, and supported chain list.
+
+## ERC-8183 job settlement (Tier 3)
+
+ARC also defines [ERC-8183](https://docs.arc.network/build/agentic-economy) for USDC-escrow job settlement between agents. AlgoVoi plans to support ERC-8183 job settlement in a future release, enabling agent-to-agent payment flows with onchain escrow and conditional release.
+
+## Agentic protocols
+
+ARC Testnet is fully supported by AlgoVoi's protocol stack:
+
+| Protocol | Status |
+| --- | --- |
+| [x402](/protocols/x402) | Supported |
+| [MPP](/protocols/mpp) | Supported (EVM method, chain ID 5042002) |
+| [A2A](/protocols/a2a) | Supported — AlgoVoi registered as ERC-8004 agent |
+
+## See also
+
+- [Base](/chains/base) and [Tempo](/chains/tempo) for other EVM chains
+- [A2A protocol](/protocols/a2a) for agent-to-agent payment flows
+- [ARC Network docs](https://docs.arc.network/build/agentic-economy) for ERC-8004 and ERC-8183 specs

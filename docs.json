@@ -53,7 +53,8 @@
               "chains/stellar",
               "chains/base",
               "chains/solana",
-              "chains/tempo"
+              "chains/tempo",
+              "chains/arc"
             ]
           },
           {
