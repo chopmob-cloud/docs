@@ -164,8 +164,8 @@ Every MPP payment — regardless of which route or client is used — is recorde
 
 | Route | Client | Storage path |
 | --- | --- | --- |
-| `GET /mpp/{resource_id}` with `X-Tenant-Id` + `X-API-Key` | Server-to-server (native code, SDK) | `payment_ledger` → B2 |
-| `GET /mpp/{tenant_short_id}/{resource_id}` with `Authorization: Payment` | AgentCash, MPP clients (no API key) | `payment_ledger` → B2 |
+| `GET /mpp/{resource_id}` with `X-Tenant-Id` + `X-API-Key` | Server-to-server (native code, SDK) | `payment_ledger` → dashboard Payments tab → B2 |
+| `GET /mpp/{tenant_short_id}/{resource_id}` with `Authorization: Payment` | AgentCash, MPP clients (no API key) | `payment_ledger` → dashboard Payments tab → B2 |
 
 ### Hash chain
 
