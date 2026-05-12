@@ -3,19 +3,19 @@ title: MCP server
 description: Expose AlgoVoi as MCP tools to Claude Desktop, Claude Code, Cursor, Windsurf, or any MCP-compatible assistant.
 ---
 
-The AlgoVoi MCP server (v1.2.0) lets any [Model Context Protocol](https://modelcontextprotocol.io) client call AlgoVoi's gateway as if its tools were native. An assistant can create payment links, verify transactions, check status, and now discover and call payment-gated A2A agents — all from a normal conversation.
+The AlgoVoi MCP server (v1.4.2 Python / v1.4.1 TypeScript) lets any [Model Context Protocol](https://modelcontextprotocol.io) client call AlgoVoi's gateway as if its tools were native. An assistant can create payment links, verify transactions, probe MPP endpoints, screen recipients, generate protocol challenges, call payment-gated A2A agents, and manage recurring payment authorities — all from a normal conversation.
 
-## 13 tools
+## 25 tools
 
 ### Payment tools
 
 | Tool | Action |
 | --- | --- |
-| `create_checkout` | Generate a hosted-checkout URL from amount + currency + chain |
+| `create_payment_link` | Generate a hosted-checkout URL from amount + currency + chain |
 | `verify_payment` | Confirm an on-chain transaction was paid for the given token |
-| `check_status` | Poll a checkout's lifecycle state |
-| `list_networks` | Return all supported chains and assets (all 7 chains) |
-| `list_resources` | List the tenant's defined paid resources |
+| `prepare_extension_payment` | Prepare an in-page browser-wallet payment (AVM chains only) |
+| `list_networks` | Return all supported chains and assets (all 7 chains, 25 network keys) |
+| `verify_webhook` | Verify an AlgoVoi webhook signature and parse the payload |
 
 ### Protocol challenge tools
 
@@ -23,6 +23,7 @@ The AlgoVoi MCP server (v1.2.0) lets any [Model Context Protocol](https://modelc
 | --- | --- |
 | `generate_mpp_challenge` | Compose an IETF MPP 402 `WWW-Authenticate` header + challenge ID |
 | `verify_mpp_receipt` | Verify an MPP on-chain receipt via direct indexer (no API call) |
+| `try_mpp_endpoint` | Probe any MPP-protected URL; decode the `WWW-Authenticate: Payment` challenge and return the `accepts[]` array — mirrors `npx agentcash try <url>` |
 | `verify_x402_proof` | Decode a base64 x402 proof and verify the transaction on-chain |
 | `generate_x402_challenge` | Compose an x402 v1 `X-Payment-Required` header |
 | `generate_ap2_mandate` | Compose an AP2 v0.1 `PaymentMandate` for agent payment flows |
@@ -32,8 +33,31 @@ The AlgoVoi MCP server (v1.2.0) lets any [Model Context Protocol](https://modelc
 
 | Tool | Action |
 | --- | --- |
-| `fetch_agent_card` | `GET {agent_url}/.well-known/agent.json` — discover a payment-gated A2A agent's capabilities before calling it |
-| `send_a2a_message` | `POST {agent_url}/message:send` — call a payment-gated A2A agent; returns the task result on 200, or `challenge_headers` on 402 for pay-and-retry |
+| `fetch_agent_card` | `GET {agent_url}/.well-known/agent.json` — discover a payment-gated A2A agent's capabilities |
+| `send_a2a_message` | `POST {agent_url}/message:send` — call a payment-gated A2A agent; returns result on 200, `challenge_headers` on 402 for pay-and-retry |
+
+### Recurring payment tools (Tier 2)
+
+Eight tools for standing-authority subscriptions — the customer authorises a spending cap once; the agent pulls on schedule without re-asking.
+
+| Tool | Action |
+| --- | --- |
+| `create_recurring_authority` | Open a standing authority (cap + period + per-cycle amount) |
+| `get_authority` | Fetch current state of an authority by ID |
+| `list_authorities` | List authorities for a subscription or by status |
+| `confirm_authority` | Mark an authority active after the on-chain wallet signature lands |
+| `revoke_authority` | Revoke an active authority (constructs on-chain revocation) |
+| `pause_authority` | Pause cycle pulls without revoking |
+| `resume_authority` | Resume a paused authority |
+| `manual_pull` | Trigger a one-off pull (catch-up or proration) |
+
+### Discovery and compliance tools
+
+| Tool | Action |
+| --- | --- |
+| `discover_resources` | Fetch the public AlgoVoi Bazaar catalog — all x402 and MPP payable resources from active tenants. No API key required. |
+| `screen_recipient` | Pre-payment sanctions screen (OFSI / OFAC SDN / EU Consolidated + AlgoVoi KYB). Returns verdict, risk_tier, and reasons under SAMLA 2018 s.20. No API key required. |
+| `get_compliance_attestation` | Fetch the operator's public compliance posture: active frameworks, live sanctions sources, audit chain heads, and Object Lock status. No API key required. |
 
 #### A2A pay-and-call flow
 
@@ -51,14 +75,32 @@ The AlgoVoi MCP server (v1.2.0) lets any [Model Context Protocol](https://modelc
    → task result returned
 ```
 
+#### MPP consumer probe flow
+
+```
+1. try_mpp_endpoint("https://api.example.com/premium-data")
+   → payment_required: true
+   → accepts: [{network: "algorand_mainnet", amount: 1000000, asset: "USDC", receiver: "..."}]
+   → expires: "2026-05-12T12:00:00Z"
+
+2. create_payment_link(amount=1, currency="USD", network="algorand_mainnet", ...)
+   → checkout_url, token
+
+3. verify_payment(token)
+   → paid: true
+
+4. try_mpp_endpoint("https://api.example.com/premium-data")
+   → status: 200, payment_required: false, body_preview: "..."
+```
+
 ## Two implementations
 
-| Implementation | Install | Source |
+| Implementation | Package | Versioned install |
 | --- | --- | --- |
-| **Python** `algovoi-mcp` | `pip install algovoi-mcp` / `uvx algovoi-mcp` | [mcp-server/python](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/mcp-server/python) |
-| **TypeScript** `@algovoi/mcp-server` | `npx -y @algovoi/mcp-server` | [mcp-server/typescript](https://github.com/chopmob-cloud/AlgoVoi-Platform-Adapters/tree/master/mcp-server/typescript) |
+| **Python** `algovoi-mcp` | [pypi.org/project/algovoi-mcp/1.4.2](https://pypi.org/project/algovoi-mcp/1.4.2/) | `uvx algovoi-mcp==1.4.2` |
+| **TypeScript** `@algovoi/mcp-server` | [npmjs.com/package/@algovoi/mcp-server](https://www.npmjs.com/package/@algovoi/mcp-server) | `npx -y @algovoi/mcp-server@1.4.1` |
 
-Both expose the same 13 tools across all 7 chains. Functional behaviour is identical.
+Both expose the same 25 tools across all 7 chains. Functional behaviour is identical.
 
 ## Wiring it into Claude Desktop
 
@@ -72,14 +114,35 @@ Add the MCP server to your Claude Desktop config (`~/Library/Application Support
       "args": ["algovoi-mcp"],
       "env": {
         "ALGOVOI_API_KEY": "algv_…",
-        "ALGOVOI_API_BASE": "https://cloud.algovoi.co.uk"
+        "ALGOVOI_TENANT_ID": "your-tenant-id",
+        "ALGOVOI_PAYOUT_ALGORAND": "your-algorand-address",
+        "ALGOVOI_PAYOUT_BASE": "0x…",
+        "ALGOVOI_PAYOUT_SOLANA": "your-solana-address"
       }
     }
   }
 }
 ```
 
-Restart Claude Desktop. The AlgoVoi tools appear in the tools list. Now ask Claude "create a \$5 USDC checkout link on Solana" and it will call `create_checkout` and return the URL.
+Restart Claude Desktop. The AlgoVoi tools appear in the tools list. Now ask Claude "create a \$5 USDC checkout link on Solana" and it will call `create_payment_link` and return the URL.
+
+Or pin to a specific version:
+
+```json
+{
+  "mcpServers": {
+    "algovoi": {
+      "command": "npx",
+      "args": ["-y", "@algovoi/mcp-server@1.4.1"],
+      "env": {
+        "ALGOVOI_API_KEY": "algv_…",
+        "ALGOVOI_TENANT_ID": "your-tenant-id",
+        "ALGOVOI_PAYOUT_ALGORAND": "your-algorand-address"
+      }
+    }
+  }
+}
+```
 
 ## Wiring into Claude Code, Cursor, or Windsurf
 
