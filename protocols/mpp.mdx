@@ -154,9 +154,62 @@ A single MPP service can charge different prices for different methods:
 
 ## Chain support
 
-Same matrix as [x402](/protocols/x402). All 7 chains supported through the same gateway, configured per-tenant in the dashboard.
+All 7 chains are supported. Each chain maps to a specific MPP method string and `methodDetails` shape per the [paymentauth.org](https://paymentauth.org) draft specifications. Configure the chain per-tenant in the dashboard; the gateway emits the correct challenge automatically.
 
-For Tempo mainnet specifically, the AgentCash CLI provides a zero-config payer experience — see [Tempo](/chains/tempo).
+### Official paymentauth.org methods
+
+| Chain | Method | Spec | `methodDetails` |
+| --- | --- | --- | --- |
+| Tempo | `tempo` | [draft-tempo-charge-00](https://paymentauth.org/draft-tempo-charge-00) | none — flat request object |
+| Solana | `solana` | [draft-solana-charge-00](https://paymentauth.org/draft-solana-charge-00) | `network: "mainnet"\|"devnet"`, `decimals` |
+| Stellar | `stellar` | [draft-stellar-charge-00](https://paymentauth.org/draft-stellar-charge-00) | `network: "stellar:pubnet"\|"stellar:testnet"` |
+| Base | `evm` | [draft-evm-charge-00](https://paymentauth.org/draft-evm-charge-00) | `chainId: 8453`, `credentialTypes: ["hash","permit2"]` |
+
+### Custom methods (AlgoVoi extensions)
+
+Algorand, VOI, and Hedera are not yet in the paymentauth.org catalogue. AlgoVoi implements custom methods for each, following the same request/credential shape as `stellar` (CAIP-2 `methodDetails.network`, push-mode `txId` credential).
+
+| Chain | Method | `methodDetails` |
+| --- | --- | --- |
+| Algorand | `algorand` | `network: "algorand:mainnet"\|"algorand:testnet"` |
+| VOI | `voi` | `network: "voi:mainnet"\|"voi:testnet"` |
+| Hedera | `hedera` | `network: "hedera:mainnet"\|"hedera:testnet"` |
+
+### Challenge example — Solana
+
+```http
+HTTP/1.1 402 Payment Required
+WWW-Authenticate: Payment realm="api.algovoi.co.uk", id="...", method="solana",
+  intent="charge", expires="...", request="<base64url>"
+```
+
+Decoded `request` object:
+
+```json
+{
+  "amount": "1000000",
+  "currency": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+  "recipient": "<payout_wallet>",
+  "methodDetails": {
+    "network": "mainnet",
+    "decimals": 6
+  }
+}
+```
+
+### Credential shapes by method
+
+| Method | Push credential | Pull credential |
+| --- | --- | --- |
+| `tempo` | `payload.hash` (EVM tx hash) | `payload.transaction` (RLP signed tx) |
+| `solana` | `payload.signature` (base58 tx sig) | `payload.transaction` (base64 serialised tx) |
+| `stellar` | `payload.hash` (64-char hex tx hash) | `payload.transaction` (base64 XDR) |
+| `evm` | `payload.hash` (0x tx hash) or `payload` permit2 object | `payload.transaction` (RLP signed tx) |
+| `algorand` | `payload.txId` (base64 tx ID) | — |
+| `voi` | `payload.txId` (base64 tx ID) | — |
+| `hedera` | `payload.txId` (Hedera tx ID) | — |
+
+For AgentCash (Tempo mainnet), the CLI handles the full challenge-pay-retry loop automatically — see [AgentCash](#agentcash) above.
 
 ## Audit trail & B2 retention
 
