@@ -156,24 +156,25 @@ A single MPP service can charge different prices for different methods:
 
 All 7 chains are supported. Each chain maps to a specific MPP method string and `methodDetails` shape per the [paymentauth.org](https://paymentauth.org) draft specifications. Configure the chain per-tenant in the dashboard; the gateway emits the correct challenge automatically.
 
-### Official paymentauth.org methods
+### Network reference
 
-| Chain | Method | Spec | `methodDetails` |
-| --- | --- | --- | --- |
-| Tempo | `tempo` | [draft-tempo-charge-00](https://paymentauth.org/draft-tempo-charge-00) | none — flat request object |
-| Solana | `solana` | [draft-solana-charge-00](https://paymentauth.org/draft-solana-charge-00) | `network: "mainnet"\|"devnet"`, `decimals` |
-| Stellar | `stellar` | [draft-stellar-charge-00](https://paymentauth.org/draft-stellar-charge-00) | `network: "stellar:pubnet"\|"stellar:testnet"` |
-| Base | `evm` | [draft-evm-charge-00](https://paymentauth.org/draft-evm-charge-00) | `chainId: 8453`, `credentialTypes: ["hash","permit2"]` |
-
-### Custom methods (AlgoVoi extensions)
+| Chain | Network | Method | Spec | `methodDetails` |
+| --- | --- | --- | --- | --- |
+| Tempo | mainnet | `tempo` | [draft-tempo-charge-00](https://paymentauth.org/draft-tempo-charge-00) | none — flat request object |
+| Solana | mainnet | `solana` | [draft-solana-charge-00](https://paymentauth.org/draft-solana-charge-00) | `network: "mainnet"`, `decimals: 6` |
+| Solana | devnet | `solana` | [draft-solana-charge-00](https://paymentauth.org/draft-solana-charge-00) | `network: "devnet"`, `decimals: 6` |
+| Stellar | mainnet | `stellar` | [draft-stellar-charge-00](https://paymentauth.org/draft-stellar-charge-00) | `network: "stellar:pubnet"` |
+| Stellar | testnet | `stellar` | [draft-stellar-charge-00](https://paymentauth.org/draft-stellar-charge-00) | `network: "stellar:testnet"` |
+| Base | mainnet | `evm` | [draft-evm-charge-00](https://paymentauth.org/draft-evm-charge-00) | `chainId: 8453`, `credentialTypes: ["hash","permit2"]` |
+| Base | sepolia | `evm` | [draft-evm-charge-00](https://paymentauth.org/draft-evm-charge-00) | `chainId: 84532`, `credentialTypes: ["hash","permit2"]` |
+| Algorand | mainnet | `algorand` | AlgoVoi extension | `network: "algorand:mainnet"` |
+| Algorand | testnet | `algorand` | AlgoVoi extension | `network: "algorand:testnet"` |
+| VOI | mainnet | `voi` | AlgoVoi extension | `network: "voi:mainnet"` |
+| VOI | testnet | `voi` | AlgoVoi extension | `network: "voi:testnet"` |
+| Hedera | mainnet | `hedera` | AlgoVoi extension | `network: "hedera:mainnet"` |
+| Hedera | testnet | `hedera` | AlgoVoi extension | `network: "hedera:testnet"` |
 
 Algorand, VOI, and Hedera are not yet in the paymentauth.org catalogue. AlgoVoi implements custom methods for each, following the same request/credential shape as `stellar` (CAIP-2 `methodDetails.network`, push-mode `txId` credential).
-
-| Chain | Method | `methodDetails` |
-| --- | --- | --- |
-| Algorand | `algorand` | `network: "algorand:mainnet"\|"algorand:testnet"` |
-| VOI | `voi` | `network: "voi:mainnet"\|"voi:testnet"` |
-| Hedera | `hedera` | `network: "hedera:mainnet"\|"hedera:testnet"` |
 
 ### Challenge example — Solana
 
