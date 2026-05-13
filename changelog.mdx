@@ -3,13 +3,30 @@ title: Changelog
 description: What shipped and when. Major releases, breaking changes, new chain support.
 ---
 
+## 2026-05-12
+
+- **MCP Server v1.4.2 (Python) — Cloudflare compatibility fix.** All HTTP requests from `algovoi-mcp` now send `User-Agent: algovoi-mcp/1.4.2`. The default `Python-urllib/3.x` user-agent was blocked by Cloudflare's bot-detection layer on `api.algovoi.co.uk` (HTTP 403 / error 1010). This affected `discover_resources`, `screen_recipient`, `get_compliance_attestation`, and all API-key-authenticated calls. TypeScript (`@algovoi/mcp-server@1.4.1`) was not affected. Upgrade: `uvx algovoi-mcp==1.4.2`.
+
+## 2026-05-10
+
+- **MCP Server v1.4.1 (TypeScript) / v1.4.1 (Python) — 25 tools, 7 chains.** Twelve new tools added over v1.2.0:
+  - `try_mpp_endpoint` — probe any MPP or x402 URL; decode `WWW-Authenticate: Payment` (MPP) or `X-Payment-Required` (x402 v1) and return the payment legs. No API key required.
+  - `verify_x402_proof` — decode a base64 x402 proof and verify the on-chain transaction.
+  - `generate_x402_challenge` — compose an x402 v1 `X-Payment-Required` header.
+  - `generate_ap2_mandate` — compose an AP2 v0.1 `PaymentMandate`.
+  - `verify_ap2_payment` — verify an AP2 mandate payment receipt via direct indexer.
+  - `discover_resources` — fetch the public AlgoVoi Bazaar catalog (x402 + MPP resources from active tenants). No API key required.
+  - `screen_recipient` — pre-payment sanctions screen against OFSI / OFAC SDN / EU Consolidated. No API key required.
+  - `get_compliance_attestation` — fetch the operator compliance posture (frameworks, audit chain, Object Lock status). No API key required.
+  - `create_recurring_authority`, `get_authority`, `list_authorities`, `confirm_authority`, `revoke_authority`, `pause_authority`, `resume_authority`, `manual_pull` — eight Tier 2 recurring-payment tools for standing-authority subscriptions.
+
 ## 2026-05-09
 
 - **Agent Trust Bench `/stats` now serves an HTML dashboard in browsers.** Visiting `agent-trust-bench.algovoi.co.uk/stats` in a browser renders a live stats page (bar charts by event type / profile, escalation funnel, top user-agent table, 30-second auto-refresh). API and agent clients receive the same JSON payload as before — content-negotiated on the `Accept` header.
 
 ## 2026-05-08
 
-- **Recurr hosted authorisation page backend is live.** `recurr.algovoi.co.uk/{signing_token}` renders the wallet-connect signing flow for Tier 2 standing authorities. Supported wallets: Pera, Defly, and Lute (Algorand/VOI) via the official WalletConnect SDK; MetaMask / Rainbow / Coinbase Wallet (EVM — Base, Tempo); Phantom / Solflare (Solana); HashPack / Blade / Kabila (Hedera); Freighter / Albedo / LOBSTR (Stellar). Bundles served from `/opt/algovoi/recurr-hosted-page` via nginx bind-mount.
+- **Recurr hosted authorisation page backend is live.** `recurr.algovoi.co.uk/{signing_token}` renders the wallet-connect signing flow for Tier 2 standing authorities. Supported wallets: AlgoVoi Extension, Pera, Defly, and Lute (Algorand/VOI) via the official WalletConnect SDK; MetaMask / Rainbow / Coinbase Wallet (EVM — Base, Tempo); Phantom / Solflare (Solana); HashPack / Blade / Kabila (Hedera); Freighter / Albedo / LOBSTR (Stellar). Bundles served from `/opt/algovoi/recurr-hosted-page` via nginx bind-mount.
 
 ## 2026-05-07
 
