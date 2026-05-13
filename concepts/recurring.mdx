@@ -13,7 +13,7 @@ AlgoVoi supports two distinct recurring-payment models. Choose based on who is p
 | Cadence options | daily / weekly / monthly / quarterly / annual / custom | Any `day` / `week` / `month` interval |
 | AlgoVoi custody | None | None — authority tx grants bounded pull rights per chain |
 | Spec | AlgoVoi proprietary | [paymentauth.org MPP](https://mpp.dev) `intent="subscription"` |
-| Status | Tier 1 live; Tier 2 pull infra deployed | Live |
+| Status | Tier 1 live; Tier 2 pull live | Live |
 
 ---
 
@@ -78,7 +78,7 @@ Every subscription includes a `cancel_url` — a single-use link in every invoic
 
 `recurr.algovoi.co.uk` lets customers connect a wallet and view or cancel all subscriptions across every merchant that has billed that wallet. Supported wallets:
 
-- **EVM** (Base, Tempo): MetaMask
+- **EVM** (Base, Tempo, ARC testnet): MetaMask
 - **Solana**: Phantom
 - **Algorand / VOI**: Pera, Defly, Lute
 - **Stellar**: Freighter, Albedo, xBull, LOBSTR
@@ -181,7 +181,7 @@ active   →  cancelled  (operator cancel or agent request)
 
 ### Supported chains
 
-All 7 AlgoVoi chains support MPP subscriptions: Algorand, VOI, Hedera, Stellar, Base (EVM), Solana, Tempo (EVM).
+All 8 AlgoVoi chains support MPP subscriptions: Algorand, VOI, Hedera, Stellar, Base (EVM), Solana, Tempo (EVM), ARC (EVM testnet).
 
 ### Key differences from Recurr
 
