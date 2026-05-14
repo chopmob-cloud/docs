@@ -1,19 +1,19 @@
 ---
 title: Recurring payments
-description: Two models — human-authorised invoice subscriptions (Recurr) and agent-native standing-authority subscriptions (MPP).
+description: Three models — invoice subscriptions (Recurr), agent-native standing-authority (MPP), and fiat-funded agent mandates (APM).
 ---
 
-AlgoVoi supports two distinct recurring-payment models. Choose based on who is paying — a human customer or an AI agent.
+AlgoVoi supports three recurring-style models. Choose based on who pays and how they fund.
 
-| | Recurr | MPP subscriptions |
-|---|---|---|
-| Who pays | Human, from their own wallet | AI agent, autonomously |
-| Auth model | Invoice email each cycle — customer pays manually | One-time on-chain authority tx; AlgoVoi pulls each period |
-| Setup | Customer portal or hosted auth page | Agent posts credential after receiving 402 challenge |
-| Cadence options | daily / weekly / monthly / quarterly / annual / custom | Any `day` / `week` / `month` interval |
-| AlgoVoi custody | None | None — authority tx grants bounded pull rights per chain |
-| Spec | AlgoVoi proprietary | [paymentauth.org MPP](https://mpp.dev) `intent="subscription"` |
-| Status | Tier 1 live; Tier 2 pull live | Live |
+| | Recurr | MPP subscriptions | [Mandates (APM)](/concepts/mandates) |
+|---|---|---|---|
+| Who pays | Human, from their own wallet | AI agent, autonomously from their wallet | AI agent, from a human-funded fiat balance |
+| Funding | Customer's crypto wallet | Customer's crypto wallet | Human's GBP balance (PayPal top-up) |
+| Auth model | Invoice email each cycle — customer pays manually | One-time on-chain authority tx; AlgoVoi pulls each period | JWT mandate token; agent calls `/mandate/pay` per use |
+| Cadence options | daily / weekly / monthly / quarterly / annual / custom | Any `day` / `week` / `month` interval | Pay-per-call (with daily/weekly/monthly caps) |
+| AlgoVoi custody | None | None — authority tx grants bounded pull rights per chain | AlgoVoi pays merchants from custodial wallet, bills the human |
+| Spec | AlgoVoi proprietary | [paymentauth.org MPP](https://mpp.dev) `intent="subscription"` | AlgoVoi proprietary |
+| Status | Tier 1 live; Tier 2 pull live | Live | Live |
 
 ---
 

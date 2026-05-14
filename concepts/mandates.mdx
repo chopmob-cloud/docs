@@ -1,0 +1,307 @@
+---
+title: Agentic Payment Mandates (APM)
+description: Fiat-funded JWT spending authority — a human authorises a GBP cap once, the agent pays autonomously, AlgoVoi settles to merchants in crypto.
+---
+
+Agentic Payment Mandates (APM) let an AI agent pay for AlgoVoi-gated resources autonomously, **without ever touching crypto**. A human authorises a GBP spending limit once, receives a signed JWT mandate token, pastes it into the agent's environment, and the agent can transact across all 8 supported chains. AlgoVoi pays merchants from its hot wallet and bills the human via their prepaid balance.
+
+| | APM | MPP subscriptions | Recurr |
+|---|---|---|---|
+| Who funds | Human, in fiat (GBP via PayPal) | Human, in crypto (wallet-funded) | Human, in crypto (each invoice) |
+| Who pays merchants | AlgoVoi (from custodial wallet) | Customer's wallet, pulled by AlgoVoi | Customer, manually |
+| Agent setup | Paste JWT into env / system prompt | Authority tx via wallet at signup | N/A (not for agents) |
+| Per-tx wallet popup | None | None | None |
+| Best for | Agents that need to spend fiat-funded budgets | Subscriptions priced in crypto | Human customers, periodic invoices |
+
+---
+
+## Customer portal — recurr.algovoi.co.uk/mandate
+
+End-users (the humans authorising the mandate) self-serve at:
+
+**[https://recurr.algovoi.co.uk/mandate](https://recurr.algovoi.co.uk/mandate)**
+
+The page accepts a **mandate ID (UUID)** and shows:
+
+- Current balance and currency (GBP pence resolution)
+- Status (`active` / `suspended` / `revoked`)
+- The mandate JWT (copyable — paste into your agent's env)
+- Last 10 charges (amount, chain, tx id, timestamp)
+- **Top up via PayPal** button (initiates PayPal Orders v2 flow, captures on return)
+
+Direct link with a mandate pre-loaded:
+
+```
+https://recurr.algovoi.co.uk/mandate?id=<MANDATE_UUID>
+```
+
+The page identifies the mandate by ID alone — no separate login. Treat the **mandate ID like an access link**: anyone who has it can view balance, JWT, and top it up (but cannot revoke or change limits). Operators retain admin control via the internal API.
+
+---
+
+## How it works
+
+```
+[1] Operator registers human as a mandate account holder
+[2] Operator issues a mandate (cap, period, merchant whitelist) → returns JWT
+[3] Human tops up balance via PayPal (or operator credits via SQL/API)
+[4] Human pastes the JWT into their agent's env vars / system prompt
+[5] Agent calls POST /mandate/pay with the JWT for each resource purchase
+[6] AlgoVoi: decrements balance → pays merchant on-chain → returns access token
+[7] Agent uses access token to retrieve the gated resource
+```
+
+Settlement happens on whichever chain the merchant has configured for that resource. The agent never sees the chain detail; it only sees GBP pence.
+
+---
+
+## Token format
+
+The mandate token is a stateless JWT, signed with a separate `MANDATE_JWT_SECRET` (key-separated from the gateway's session JWTs). Format:
+
+```json
+{
+  "jti": "<mandate-row-uuid>",
+  "sub": "<account-uuid>",
+  "typ_claim": "mandate_v1",
+  "iat": 1778775645,
+  "exp": 1778779245
+}
+```
+
+- `jti` — UUID stored on the `mandates` row (pre-allocated at issue time, primary index for fast revocation lookup)
+- `sub` — the `mandate_accounts.id` of the human who owns it
+- `typ_claim` — token type marker; the verifier rejects anything other than `mandate_v1`
+- `exp` — optional expiry; if omitted, the token is non-expiring (caps + balance still enforce limits)
+
+Tokens are HS256-signed; no asymmetric keys to manage. **Treat them like a prepaid debit card number** — whoever holds the token can spend up to the balance against whitelisted merchants. Use mandate expiry (`ttl_secs` at issue time) and merchant whitelist as primary mitigations.
+
+---
+
+## Spending the mandate — agent integration
+
+The agent calls a single endpoint:
+
+```bash
+curl -X POST https://api.algovoi.co.uk/mandate/pay \
+  -H "Authorization: Bearer $ALGOVOI_MANDATE_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tenant_id": "96eb0225-dd47-4bc3-be10-143d6e6d7bd1",
+    "resource_id": "a52aa0a9-db9a-4212-85f3-e91647c399b9",
+    "max_amount_minor": 200,
+    "description": "Research API call"
+  }'
+```
+
+Response (200):
+
+```json
+{
+  "charge_id": "1d8e3...",
+  "amount_minor": 80,
+  "currency": "GBP",
+  "tx_id": "ALGO_TX_ID_HERE",
+  "chain": "algorand_mainnet",
+  "remaining_balance_minor": 1420,
+  "access_token": "eyJhbGciOiJI..."
+}
+```
+
+The `access_token` is the same short-lived JWT that the resource endpoint accepts — the agent then calls the resource with `Authorization: Bearer <access_token>`.
+
+### Per-call guards
+
+- `max_amount_minor` — agent self-cap. If the resolved resource costs more than this, the call returns `402` and **no charge occurs**.
+- Mandate balance — if `amount_minor > balance_minor`, returns `402`.
+- Period cap (daily/weekly/monthly) — if this charge would push `period_spent_minor` over the cap, returns `402`.
+- Merchant whitelist — if `merchant_whitelist` is non-null and `tenant_id` is not in it, returns `403`.
+
+### Response codes
+
+| Code | Meaning |
+|---|---|
+| `200` | Charge settled. `tx_id` is the on-chain settlement; `access_token` unlocks the resource. |
+| `401` | Token invalid, expired, or revoked. |
+| `402` | Balance/cap/agent-self-cap exceeded. |
+| `403` | Merchant not in mandate whitelist. |
+| `404` | Resource not found. |
+| `502` | On-chain payout failed — agent should retry with idempotency. |
+
+---
+
+## Operator workflow — internal API
+
+All admin operations are at `/internal/*` and require the admin bearer token.
+
+### 1. Register a human account holder
+
+```bash
+curl -X POST https://api.algovoi.co.uk/internal/mandate-accounts/register \
+  -H "Authorization: Bearer $ADMIN_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "agent-owner@example.com",
+    "display_name": "Acme Co — research bot"
+  }'
+```
+
+Returns `{ id, email, status, created_at }`. Save the `id` — needed for issuance.
+
+### 2. Issue a mandate
+
+```bash
+curl -X POST https://api.algovoi.co.uk/internal/mandates \
+  -H "Authorization: Bearer $ADMIN_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_id": "<ACCOUNT_UUID>",
+    "display_name": "Acme research bot — Q2 budget",
+    "period": "monthly",
+    "period_cap_minor": 10000,
+    "ttl_secs": 2592000,
+    "merchant_whitelist": ["96eb0225-..."]
+  }'
+```
+
+Returns the `mandate_id`, the **JWT token** (this is the only time it is returned — store it now or have the user load `recurr.algovoi.co.uk/mandate?id=<mandate_id>` to retrieve it), `balance_minor`, `currency`, `period`, `status`.
+
+### 3. Top up balance
+
+Two paths:
+
+**Via PayPal (customer self-serve)** — direct the user to `recurr.algovoi.co.uk/mandate?id=<mandate_id>`. They click "Top up", complete PayPal checkout, balance credited on capture.
+
+**Via admin API (operator-credited)** — for invoiced enterprise accounts:
+
+```bash
+curl -X POST https://api.algovoi.co.uk/internal/mandates/<MANDATE_ID>/topup \
+  -H "Authorization: Bearer $ADMIN_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "amount_minor": 50000 }'
+```
+
+### 4. List, view charges, revoke
+
+```bash
+# List all mandates for an account
+curl -H "Authorization: Bearer $ADMIN_API_KEY" \
+  "https://api.algovoi.co.uk/internal/mandates?account_id=<ACCOUNT_UUID>"
+
+# View charges
+curl -H "Authorization: Bearer $ADMIN_API_KEY" \
+  "https://api.algovoi.co.uk/internal/mandates/<MANDATE_ID>/charges"
+
+# Revoke (idempotent — JWT immediately invalidated)
+curl -X DELETE -H "Authorization: Bearer $ADMIN_API_KEY" \
+  "https://api.algovoi.co.uk/internal/mandates/<MANDATE_ID>"
+```
+
+---
+
+## Period semantics
+
+The `period` field controls the rolling spending cap:
+
+| `period` | Behaviour |
+|---|---|
+| `daily` | `period_spent_minor` resets every 24h from `period_reset_at` |
+| `weekly` | Resets every 7 days |
+| `monthly` | Resets every 30 days |
+| `unlimited` | No period cap; only `balance_minor` and merchant whitelist limit spending |
+
+Reset is **lazy** — `period_spent_minor` is rolled forward on the next `POST /mandate/pay` after the boundary, not on a cron. Analytics queries that read `period_spent_minor` directly may see stale values between the boundary and the next charge.
+
+---
+
+## Custody
+
+APM is the **only AlgoVoi product where AlgoVoi takes custody of funds**. This is the deliberate trade-off that makes agent-native fiat spending possible — agents cannot hold private keys or fiat accounts, so a regulated custodian has to stand in.
+
+### Where the money sits at each stage
+
+```
+[1] PayPal top-up        →  Funds settle from PayPal to AlgoVoi's UK business
+                            bank account (segregated client-money account, not
+                            AlgoVoi operating capital).
+[2] balance_minor row    →  Postgres column on the mandate.  Source of truth
+                            for "how much the user has left to spend."
+[3] Agent calls /pay     →  balance_minor decremented within a single transaction
+                            that also writes the mandate_charges ledger row.
+[4] Merchant payout      →  AlgoVoi's custodial hot wallet on the target chain
+                            sends the equivalent crypto amount to the merchant's
+                            configured payout address.  On-chain settlement is
+                            final — there is no reversal once tx_id confirms.
+[5] Treasury rebalance   →  Off-cycle, AlgoVoi sells GBP → stablecoin to keep
+                            the hot wallet floats topped up.  Users do not see
+                            this; the user-visible flow is GBP in, GBP out.
+```
+
+### Custody model vs the other AlgoVoi products
+
+| | Recurr | MPP subscriptions | **APM (Mandates)** |
+|---|---|---|---|
+| Customer funds custody | Customer | Customer | **AlgoVoi** |
+| Merchant payout custody | Customer's wallet | Customer's wallet (pulled) | **AlgoVoi's custodial hot wallet** |
+| Maximum AlgoVoi exposure | None | None | Sum of all `balance_minor` |
+| Failure-mode for the user | Pay one invoice manually | Authority tx already on chain | **Custodied balance at risk if AlgoVoi insolvent** |
+| Regulatory perimeter | Payment-processor only | Payment-processor only | **E-money / safeguarding regime** |
+
+### Safeguarding
+
+The fiat-balance custody puts APM in a different regulatory bucket from the rest of the platform:
+
+- **UK**: holding pre-paid customer balances triggers FCA safeguarding obligations under the Electronic Money Regulations 2011 if the activity meets the e-money definition. AlgoVoi operates the APM balance as a **segregated client-money account**, not commingled with operating funds, and is in the process of obtaining the relevant authorisation (status: in preparation — see [Compliance](/compliance)).
+- **EU**: equivalent treatment under PSD2 / EMD2 if offering APM cross-border to EU residents.
+- **US**: state money-transmitter licensing if APM is offered to US residents; not currently available in the US.
+
+Until full authorisation lands, APM balances are capped per-mandate (default £100, configurable per-operator) to keep total client-money exposure within the small-issuer threshold. Operators offering APM to customers should disclose the safeguarding status — boilerplate copy is in `/legal/mandate-terms`.
+
+### Hot-wallet security
+
+The custodial hot wallets that pay merchants on-chain are operationally separated from the customer balance accounting:
+
+- **Hot wallet float per chain**, not per user. The £15 mandate has no specific crypto reserved against it — the wallet holds enough liquidity in aggregate to settle expected daily volume, with overnight cold-storage sweeps for the excess.
+- **HSM-backed signing** for high-value chains (Base, Algorand mainnet, Stellar); software signing with key-encryption-at-rest for testnets and low-value chains.
+- **Rate limits at the facilitator** prevent a compromised gateway from draining the float — per-chain daily cap and per-tx maximum.
+- **No user keys held**. APM never asks the user for, generates, or stores any private key on the user's behalf. The user's relationship with AlgoVoi is purely fiat-balance-based.
+
+### What this means for users
+
+The portal at [recurr.algovoi.co.uk/mandate](https://recurr.algovoi.co.uk/mandate) makes the trade-off explicit:
+
+- **You don't need a crypto wallet** to use APM. That's the value proposition.
+- **You give up custody of your fiat balance** during the period it sits with AlgoVoi.
+- **Top-ups are not refundable** once spent — when `balance_minor` is debited and a merchant payout `tx_id` is confirmed, the funds have left the system on-chain and can't be clawed back. **Unspent** balances are refundable on mandate closure, subject to identity verification.
+- **Choose your cap deliberately.** A £100 mandate exposes £100 of custody risk; a £10 mandate exposes £10. For untrusted agents, start small.
+
+### What this means for operators
+
+If you're offering APM to your own customers (white-label via `merchant_whitelist`), you need to think about three things:
+
+1. **Disclosure** — your terms must tell the end-user that funds are custodied by AlgoVoi, not by you. Standard template clause available on request.
+2. **Float planning** — APM revenue lands in AlgoVoi's account, not yours. Settlements to you happen on-chain when the agent buys your resources. Tax and accounting follow standard crypto-settlement rules for your jurisdiction.
+3. **Refund routing** — if your customer asks for a refund, you process it through your own payment rails (or via AlgoVoi if AlgoVoi is the merchant of record for the resource). The mandate balance does not flow back automatically — it's already been spent on-chain.
+
+---
+
+## Security model
+
+| Risk | Mitigation |
+|---|---|
+| JWT leaked from agent env | Mandate `exp` claim + revoke via `DELETE /internal/mandates/{id}` (instant) |
+| Compromised agent over-spends | `period_cap_minor` caps loss per cycle; balance caps total loss |
+| Wrong merchant gets paid | `merchant_whitelist` UUIDs — `403` if `tenant_id` not in list |
+| Replay / double-charge | `pg_advisory_xact_lock(hashtext(jti))` + `SELECT FOR UPDATE` on every call |
+| Token forgery | HS256 signed with `MANDATE_JWT_SECRET` (≥32 chars, key-separated from session JWTs) |
+| Custodial hot wallet compromise | HSM signing on high-value chains; per-chain daily cap; off-cycle cold sweeps |
+| AlgoVoi insolvency | Client-money segregation; in-preparation FCA safeguarding authorisation; per-mandate balance cap until authorised |
+
+There is no chargeback model. Mandate top-ups are non-refundable once balance is debited to settle a merchant payout (the merchant has been paid on-chain — there's nothing to claw back). **Unspent** balance is refundable on mandate closure subject to identity verification. Operators should set conservative `period_cap_minor` and `ttl_secs` for new accounts.
+
+---
+
+## See also
+
+- [Architecture — payment protocols overview](/concepts/architecture) for how APM relates to x402, MPP, AP2, A2A
+- [Recurring payments](/concepts/recurring) for the Recurr (human-paid) and MPP-subscription models
