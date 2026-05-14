@@ -251,11 +251,18 @@ APM is the **only AlgoVoi product where AlgoVoi takes custody of funds**. This i
 
 The fiat-balance custody puts APM in a different regulatory bucket from the rest of the platform:
 
-- **UK**: holding pre-paid customer balances triggers FCA safeguarding obligations under the Electronic Money Regulations 2011 if the activity meets the e-money definition. AlgoVoi operates the APM balance as a **segregated client-money account**, not commingled with operating funds, and is in the process of obtaining the relevant authorisation (status: in preparation — see [Compliance](/compliance)).
+- **UK**: holding pre-paid customer balances triggers **EMR 2011 safeguarding obligations** under regulations 20-21 (the funds-received and segregation rules), with PSR 2017 reg 23 covering any non-e-money payment-transaction funds (via EMR 20(6)). This is the EMR/PSR regime — NOT the CASS 7 client-money regime which governs investment business. AlgoVoi is in the process of obtaining the relevant authorisation (status: in preparation — see [Compliance](/compliance)).
 - **EU**: equivalent treatment under PSD2 / EMD2 if offering APM cross-border to EU residents.
 - **US**: state money-transmitter licensing if APM is offered to US residents; not currently available in the US.
 
-Until full authorisation lands, APM balances are capped per-mandate (default £100, configurable per-operator) to keep total client-money exposure within the small-issuer threshold. Operators offering APM to customers should disclose the safeguarding status — boilerplate copy is in `/legal/mandate-terms`.
+Until full authorisation lands, APM operates on a **closed-beta posture** with hard balance caps enforced in code:
+
+- **Per-mandate balance cap** (default **£100**): enforced at issuance, admin top-up, PayPal initiate, and PayPal capture — every code path that increases `balance_minor`.
+- **Per-account aggregate cap** (default **£500**): sum across all active mandates owned by the same human; same enforcement points.
+
+These caps are configurable via `MANDATE_MAX_BALANCE_MINOR` / `MANDATE_MAX_ACCOUNT_BALANCE_MINOR` in shared config; set either to `0` to disable that specific cap once authorisation is granted.
+
+Per EMR 2011 reg 21(2)(a), safeguarded funds must be segregated by the end of the **fifth business day** following the day on which the e-money was issued. AlgoVoi's PayPal-capture flow credits `balance_minor` synchronously on the same business day funds settle to the safeguarding account.
 
 ### Hot-wallet security
 
@@ -266,13 +273,25 @@ The custodial hot wallets that pay merchants on-chain are operationally separate
 - **Rate limits at the facilitator** prevent a compromised gateway from draining the float — per-chain daily cap and per-tx maximum.
 - **No user keys held**. APM never asks the user for, generates, or stores any private key on the user's behalf. The user's relationship with AlgoVoi is purely fiat-balance-based.
 
+### Evidence the FCA will look for
+
+Safeguarding readiness is not a one-off setup — the FCA expects ongoing controls evidence. The minimum documented set for APM:
+
+1. **Designated safeguarding account at the bank** with a letter from the bank confirming designation per EMR 21(3)(a). Internal labelling is not sufficient; the account name or accompanying bank letter must make the safeguarding purpose obvious.
+2. **Chain-by-chain reconciliation** from the mandate ledger (`balance_minor` aggregated) through `mandate_charges.tx_id` to the on-chain wallet balance — performed and recorded daily, with discrepancies investigated within one business day.
+3. **Key-management governance** — who can sign, signing thresholds (m-of-n for HSM-protected wallets), key rotation cadence, incident response.
+4. **Sweep and float-management policy** — when excess float moves to cold storage, who authorises, how reconciliations follow the funds.
+5. **Wind-down plan** showing how every active mandate would be made whole if AlgoVoi ceased operations or the wallet stack failed (refund route, communication, timeline).
+6. **Books and records** per EMR 21(5) — ledger entries that identify each user's safeguarded balance, retained per the FCA's record-keeping rules.
+
 ### What this means for users
 
 The portal at [recurr.algovoi.co.uk/mandate](https://recurr.algovoi.co.uk/mandate) makes the trade-off explicit:
 
 - **You don't need a crypto wallet** to use APM. That's the value proposition.
 - **You give up custody of your fiat balance** during the period it sits with AlgoVoi.
-- **Top-ups are not refundable** once spent — when `balance_minor` is debited and a merchant payout `tx_id` is confirmed, the funds have left the system on-chain and can't be clawed back. **Unspent** balances are refundable on mandate closure, subject to identity verification.
+- **Unspent balance is refundable** on mandate closure (subject to identity verification) — EMR 2011 reg 39 redemption rights apply.
+- **Spent balance is refundable for at-fault failures** — if AlgoVoi delivers the wrong payout, the merchant doesn't deliver the resource, or a double-charge occurs, you get a refund of the GBP amount from AlgoVoi's reserves. The on-chain payout to the merchant cannot be reversed, but you the user are made whole. This is required under CRA 2015 fairness rules; "non-refundable once spent" as a blanket term is not enforceable in UK consumer law.
 - **Choose your cap deliberately.** A £100 mandate exposes £100 of custody risk; a £10 mandate exposes £10. For untrusted agents, start small.
 
 ### What this means for operators
@@ -297,7 +316,13 @@ If you're offering APM to your own customers (white-label via `merchant_whitelis
 | Custodial hot wallet compromise | HSM signing on high-value chains; per-chain daily cap; off-cycle cold sweeps |
 | AlgoVoi insolvency | Client-money segregation; in-preparation FCA safeguarding authorisation; per-mandate balance cap until authorised |
 
-There is no chargeback model. Mandate top-ups are non-refundable once balance is debited to settle a merchant payout (the merchant has been paid on-chain — there's nothing to claw back). **Unspent** balance is refundable on mandate closure subject to identity verification. Operators should set conservative `period_cap_minor` and `ttl_secs` for new accounts.
+**Refund model**:
+
+- **Unspent balance** — refundable on mandate closure subject to identity verification (EMR 2011 reg 39 redemption rights).
+- **At-fault failures** (wrong merchant settled, resource not delivered, double-charge) — refundable from AlgoVoi reserves via `POST /internal/mandate-charges/{id}/refund`. The on-chain payout to the merchant is irreversible, but AlgoVoi credits the user back in GBP and treasury reconciles. Required under CRA 2015 — blanket "non-refundable" terms are unenforceable.
+- **Successful purchases where the customer changes their mind** — no automatic refund (the merchant has been paid, the resource was delivered). The customer's recourse is with the merchant.
+
+Operators should set conservative `period_cap_minor` and `ttl_secs` for new accounts.
 
 ---
 
