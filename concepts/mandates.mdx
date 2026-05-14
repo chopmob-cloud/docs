@@ -255,12 +255,13 @@ The fiat-balance custody puts APM in a different regulatory bucket from the rest
 - **EU**: equivalent treatment under PSD2 / EMD2 if offering APM cross-border to EU residents.
 - **US**: state money-transmitter licensing if APM is offered to US residents; not currently available in the US.
 
-Until full authorisation lands, APM operates on a **closed-beta posture** with hard balance caps enforced in code:
+Until full authorisation lands, APM operates on a **closed-beta posture** with three hard caps enforced in code:
 
-- **Per-mandate balance cap** (default **£100**): enforced at issuance, admin top-up, PayPal initiate, and PayPal capture — every code path that increases `balance_minor`.
-- **Per-account aggregate cap** (default **£500**): sum across all active mandates owned by the same human; same enforcement points.
+- **Per-mandate balance cap** (default **£100**): enforced at issuance, admin top-up, PayPal initiate, and PayPal capture — every code path that increases `balance_minor`. Config: `MANDATE_MAX_BALANCE_MINOR`.
+- **Per-account aggregate balance cap** (default **£300**): sum of `balance_minor` across all active mandates owned by the same human; same enforcement points. Config: `MANDATE_MAX_ACCOUNT_BALANCE_MINOR`.
+- **Per-account mandate-count cap** (default **3**): enforced at issuance only — an account holding 3 active (non-revoked) mandates cannot issue a fourth. Config: `MANDATE_MAX_PER_ACCOUNT`.
 
-These caps are configurable via `MANDATE_MAX_BALANCE_MINOR` / `MANDATE_MAX_ACCOUNT_BALANCE_MINOR` in shared config; set either to `0` to disable that specific cap once authorisation is granted.
+The three caps compose so total custodial exposure per human is **strictly bounded to £300** (3 mandates × £100 each). Set any individual cap to `0` to disable that check once authorisation is granted or a higher-trust account is whitelisted.
 
 Per EMR 2011 reg 21(2)(a), safeguarded funds must be segregated by the end of the **fifth business day** following the day on which the e-money was issued. AlgoVoi's PayPal-capture flow credits `balance_minor` synchronously on the same business day funds settle to the safeguarding account.
 
@@ -314,7 +315,8 @@ If you're offering APM to your own customers (white-label via `merchant_whitelis
 | Replay / double-charge | `pg_advisory_xact_lock(hashtext(jti))` + `SELECT FOR UPDATE` on every call |
 | Token forgery | HS256 signed with `MANDATE_JWT_SECRET` (≥32 chars, key-separated from session JWTs) |
 | Custodial hot wallet compromise | HSM signing on high-value chains; per-chain daily cap; off-cycle cold sweeps |
-| AlgoVoi insolvency | Client-money segregation; in-preparation FCA safeguarding authorisation; per-mandate balance cap until authorised |
+| AlgoVoi insolvency | EMR 2011 reg 21 segregation; bank-designation evidence; in-preparation FCA authorisation; 3-mandate × £100 per-account cap until authorised |
+| At-fault failure (wrong settlement / undelivered resource) | Operator-initiated refund via `POST /internal/mandate-charges/{id}/refund` — restores `balance_minor` from AlgoVoi reserves (CRA 2015) |
 
 **Refund model**:
 
