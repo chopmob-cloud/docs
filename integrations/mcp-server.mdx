@@ -3,7 +3,7 @@ title: MCP server
 description: Expose AlgoVoi as MCP tools to Claude Desktop, Claude Code, Cursor, Windsurf, or any MCP-compatible assistant.
 ---
 
-The AlgoVoi MCP server (v1.4.2 Python / v1.4.1 TypeScript) lets any [Model Context Protocol](https://modelcontextprotocol.io) client call AlgoVoi's gateway as if its tools were native. An assistant can create payment links, verify transactions, probe MPP endpoints, screen recipients, generate protocol challenges, call payment-gated A2A agents, and manage recurring payment authorities — all from a normal conversation.
+The AlgoVoi MCP server (v1.4.3 on both Python and TypeScript as of 2026-05-17) lets any [Model Context Protocol](https://modelcontextprotocol.io) client call AlgoVoi's gateway as if its tools were native. An assistant can create payment links, verify transactions, probe MPP endpoints, screen recipients, generate protocol challenges, call payment-gated A2A agents, and manage recurring payment authorities — all from a normal conversation.
 
 ## 25 tools
 
@@ -14,7 +14,7 @@ The AlgoVoi MCP server (v1.4.2 Python / v1.4.1 TypeScript) lets any [Model Conte
 | `create_payment_link` | Generate a hosted-checkout URL from amount + currency + chain |
 | `verify_payment` | Confirm an on-chain transaction was paid for the given token |
 | `prepare_extension_payment` | Prepare an in-page browser-wallet payment (AVM chains only) |
-| `list_networks` | Return all supported chains and assets (all 7 chains, 25 network keys) |
+| `list_networks` | Return all supported chains and assets (all 8 chains including ARC testnet, 26 network keys) |
 | `verify_webhook` | Verify an AlgoVoi webhook signature and parse the payload |
 
 ### Protocol challenge tools
@@ -23,7 +23,7 @@ The AlgoVoi MCP server (v1.4.2 Python / v1.4.1 TypeScript) lets any [Model Conte
 | --- | --- |
 | `generate_mpp_challenge` | Compose an IETF MPP 402 `WWW-Authenticate` header + challenge ID |
 | `verify_mpp_receipt` | Verify an MPP on-chain receipt via direct indexer (no API call) |
-| `try_mpp_endpoint` | Probe any MPP-protected URL; decode the `WWW-Authenticate: Payment` challenge and return the `accepts[]` array — mirrors `npx agentcash try <url>` |
+| `try_mpp_endpoint` | Probe any URL gated by MPP or x402; decode the `WWW-Authenticate: Payment` header (MPP) or the `X-Payment-Required` / `PAYMENT-REQUIRED` header (x402 v1) and return the payment details — mirrors `npx agentcash try <url>` |
 | `verify_x402_proof` | Decode a base64 x402 proof and verify the transaction on-chain |
 | `generate_x402_challenge` | Compose an x402 v1 `X-Payment-Required` header |
 | `generate_ap2_mandate` | Compose an AP2 v0.1 `PaymentMandate` for agent payment flows |
@@ -81,7 +81,7 @@ Eight tools for standing-authority subscriptions — the customer authorises a s
 1. try_mpp_endpoint("https://api.example.com/premium-data")
    → payment_required: true
    → accepts: [{network: "algorand_mainnet", amount: 1000000, asset: "USDC", receiver: "..."}]
-   → expires: "2026-05-12T12:00:00Z"
+   → expires: "2026-05-19T12:00:00Z"
 
 2. create_payment_link(amount=1, currency="USD", network="algorand_mainnet", ...)
    → checkout_url, token
@@ -93,18 +93,35 @@ Eight tools for standing-authority subscriptions — the customer authorises a s
    → status: 200, payment_required: false, body_preview: "..."
 ```
 
+#### x402 probe flow
+
+```
+1. try_mpp_endpoint("https://api.example.com/data")
+   → status: 402, payment_required: true
+   → x402_challenge: {accepts: [{network: "base-mainnet", amount: "10000", asset: "0x833..."}]}
+
+2. generate_x402_challenge(network="base_mainnet", amount=0.01, asset="USDC")
+   → x402_header, challenge_id
+
+3. verify_x402_proof(proof=<base64-proof>, network="base_mainnet")
+   → verified: true, tx_id: "0x..."
+```
+
 ## Two implementations
 
 | Implementation | Package | Versioned install |
 | --- | --- | --- |
-| **Python** `algovoi-mcp` | [pypi.org/project/algovoi-mcp/1.4.2](https://pypi.org/project/algovoi-mcp/1.4.2/) | `uvx algovoi-mcp==1.4.2` |
-| **TypeScript** `@algovoi/mcp-server` | [npmjs.com/package/@algovoi/mcp-server](https://www.npmjs.com/package/@algovoi/mcp-server) | `npx -y @algovoi/mcp-server@1.4.1` |
+| **Python** `algovoi-mcp` | [pypi.org/project/algovoi-mcp/1.4.3](https://pypi.org/project/algovoi-mcp/1.4.3/) | `uvx algovoi-mcp==1.4.3` |
+| **TypeScript** `@algovoi/mcp-server` | [npmjs.com/package/@algovoi/mcp-server](https://www.npmjs.com/package/@algovoi/mcp-server) | `npx -y @algovoi/mcp-server@1.4.3` |
 
-Both expose the same 25 tools across all 7 chains. Functional behaviour is identical.
+Both expose the same 25 tools across all 8 chains (Base, Algorand, Solana, Stellar, Hedera, Tempo, VOI, and ARC testnet). Functional behaviour is identical.
 
 ## Wiring it into Claude Desktop
 
-Add the MCP server to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+Add the MCP server to your Claude Desktop config:
+
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
@@ -117,7 +134,8 @@ Add the MCP server to your Claude Desktop config (`~/Library/Application Support
         "ALGOVOI_TENANT_ID": "your-tenant-id",
         "ALGOVOI_PAYOUT_ALGORAND": "your-algorand-address",
         "ALGOVOI_PAYOUT_BASE": "0x…",
-        "ALGOVOI_PAYOUT_SOLANA": "your-solana-address"
+        "ALGOVOI_PAYOUT_SOLANA": "your-solana-address",
+        "ALGOVOI_PAYOUT_TEMPO": "0x…"
       }
     }
   }
@@ -137,7 +155,9 @@ Or pin to a specific version:
       "env": {
         "ALGOVOI_API_KEY": "algv_…",
         "ALGOVOI_TENANT_ID": "your-tenant-id",
-        "ALGOVOI_PAYOUT_ALGORAND": "your-algorand-address"
+        "ALGOVOI_PAYOUT_ALGORAND": "your-algorand-address",
+        "ALGOVOI_PAYOUT_BASE": "0x…",
+        "ALGOVOI_PAYOUT_TEMPO": "0x…"
       }
     }
   }
@@ -146,7 +166,26 @@ Or pin to a specific version:
 
 ## Wiring into Claude Code, Cursor, or Windsurf
 
-Same shape as Claude Desktop. Each editor has its own MCP config location, but the server entry is the same.
+**Claude Code** — add to `.claude/mcp.json` in your project root (project-scoped) or `~/.claude/mcp.json` (global):
+
+```json
+{
+  "mcpServers": {
+    "algovoi": {
+      "command": "uvx",
+      "args": ["algovoi-mcp==1.4.2"],
+      "env": {
+        "ALGOVOI_API_KEY": "algv_…",
+        "ALGOVOI_TENANT_ID": "your-tenant-id",
+        "ALGOVOI_PAYOUT_ALGORAND": "your-algorand-address",
+        "ALGOVOI_PAYOUT_BASE": "0x…"
+      }
+    }
+  }
+}
+```
+
+**Cursor** — add to `.cursor/mcp.json` in your project root. **Windsurf** — add to `.codeium/windsurf/mcp_config.json`. The server entry shape is identical across all three editors.
 
 ## A2A and MCP together
 
