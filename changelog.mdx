@@ -3,6 +3,10 @@ title: Changelog
 description: What shipped and when. Major releases, breaking changes, new chain support.
 ---
 
+## 2026-05-19
+
+- **AlgoVoi Chrome extension v2.5.0 — six-chain payment-protocol coverage.** Browser extension now ships native x402, MPP, and AP2 support across Algorand, VOI, Hedera, Base, Arc, and Tempo. Eighteen-of-eighteen protocol × chain combinations wired in a single popup. Signing scheme per chain: AVM (Algorand / VOI) via `algosdk` Ed25519; Hedera via HashPack WalletConnect for HTS; EVM (Base / Arc / Tempo) via viem `signTransaction` secp256k1 with chain-appropriate value transfer (ERC-20 `transfer(USDC)` on Base, native gas USDC on Arc, ERC-20 `transfer(USDCe)` on Tempo). AP2 mandates Ed25519-signed on AVM / Hedera, EIP-191 secp256k1-signed on EVM. MPP credentials carry `did:pkh:eip155:<chainId>:<address>` on EVM rails so downstream verifiers resolve the signer to the correct chain without a translation layer. Single browser wallet for the full AlgoVoi payment-protocol surface.
+
 ## 2026-05-17
 
 - **Agent Trust Bench now spans all 8 supported chains.** Every 402 challenge returns 8 `accepts[]` legs: Base, Algorand, Solana, Stellar, Hedera, Tempo, VOI, and ARC testnet. Agents can pick whichever chain they support. All receivers are pre-configured (opted-in, trustlined, or associated as appropriate), with per-chain decimal scaling handled automatically in the envelope (Stellar 7dp, ARC native gas USDC 18dp, everything else 6dp). The bench is now the first public x402 research surface offering this level of chain parity. Hedera receiver swapped to `0.0.10376692` (HTS USDC associated UNFROZEN). VOI uses native ASA 302190 (Aramid aUSDC), not ARC200. Discovery metadata surfaces (`/donations`, `/.well-known/x402.json`, `/discovery/resources`) and the landing footer + stats page all updated to list all 8 receivers.

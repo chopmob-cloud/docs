@@ -62,6 +62,7 @@
             "group": "Integrations",
             "pages": [
               "integrations/overview",
+              "integrations/chrome-extension",
               "integrations/ai-frameworks",
               "integrations/ai-models",
               "integrations/ecommerce",

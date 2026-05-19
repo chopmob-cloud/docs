@@ -1,0 +1,103 @@
+---
+title: Chrome extension
+description: AlgoVoi's in-house browser wallet — native x402, MPP, and AP2 payment-protocol support across six chains in one Manifest V3 extension.
+---
+
+The **AlgoVoi Chrome extension** is the in-house browser wallet for the AlgoVoi payment stack. As of **v2.5.0** (2026-05-19) it ships native x402 / MPP / AP2 support across six mainnet chains in a single extension: Algorand, VOI, Hedera, Base, Arc, and Tempo. Eighteen of eighteen protocol × chain combinations are wired in one popup, with chain-appropriate signing schemes routed transparently behind the UI.
+
+Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/algovoi/ofmgegnkjdmbeakjbmfaagigmhagdcbl) or build from source at [chopmob-cloud/AlgoVoi](https://github.com/chopmob-cloud/AlgoVoi).
+
+## Why the extension exists
+
+Most browser wallets pick one chain family (EVM, Solana, or AVM) and run with it. Agent payments cross those boundaries constantly: a buyer agent on Base settling an x402 charge for an Algorand merchant, or an MPP gateway issuing both `method="evm"` and `method="avm"` challenges for the same resource. Routing that through three separate wallets multiplies key custody, breaks the approval flow, and defeats the point of native browser-handled `fetch()` interception.
+
+The AlgoVoi extension collapses the six chains AlgoVoi-the-platform settles on into a single browser wallet, with one popup, one approval UX, and a single page-injected `window.algorand` provider that resolves the right signing path automatically.
+
+## Chain × protocol coverage matrix
+
+| Protocol | Algorand | VOI | Hedera | Base | Arc | Tempo |
+| --- | --- | --- | --- | --- | --- | --- |
+| **x402** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **MPP**  | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **AP2**  | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+All eighteen combinations wired from v2.5.0. The extension auto-detects the active chain at the page, account, or challenge level and routes the signing call through the correct chain client without user intervention.
+
+## Signing scheme by chain
+
+| Chain | x402 / MPP signing | AP2 mandate signing |
+| --- | --- | --- |
+| Algorand | `algosdk` txn (Ed25519) — native ALGO or USDC ASA `31566704` | `algosdk.signBytes` (Ed25519) |
+| VOI | `algosdk` txn (Ed25519) — native VOI or aUSDC ASA `302190` | `algosdk.signBytes` (Ed25519) |
+| Hedera | HashPack WalletConnect (HTS) — HBAR or USDC HTS `0.0.456858` | `algosdk.signBytes` (Ed25519, reuses the AVM key) |
+| Base | viem `signTransaction` (secp256k1) + ERC-20 `transfer(USDC)` on `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` | viem `signMessage` (EIP-191 personal_sign), 65-byte signature base64url-encoded |
+| Arc | viem `signTransaction` (secp256k1) + native value transfer (Arc's native gas token is USDC) | viem `signMessage` (EIP-191) |
+| Tempo | viem `signTransaction` (secp256k1) + ERC-20 `transfer(USDCe)` | viem `signMessage` (EIP-191) |
+
+The AVM seed (Algorand + VOI + Hedera) and the EVM seed (Base + Arc + Tempo) live as separate keys inside the same encrypted vault. The vault holds both pairs, and the active-account selector in the popup decides which key path the next signing request will take.
+
+## Key features
+
+- **Encrypted vault** — PBKDF2 (600k iterations) + AES-GCM-256. Keys never leave the device unencrypted; the session key is held in service-worker memory only and wiped on lock or service-worker suspension.
+- **30-day local signing key** — Import a 25-word mnemonic with a 30-day TTL for reliable local signing without WalletConnect-relay dependency. Stricter than MetaMask or Phantom defaults; auto-wipes after the TTL expires.
+- **Falcon PQC signatures** — Post-quantum Falcon-1024 accounts on Algorand mainnet, WASM build (88 KB) of the same C Falcon library backing the AVM v12 `falcon_verify` opcode. Quantum-resistant signing today.
+- **AI agent wallet** — WalletConnect Web3Wallet mode lets AI agents pair with the extension and request transaction signing without ever touching private keys. All six chains addressable in a single WC session via CAIP-2 namespaces.
+- **Anti-phishing** — Clipboard hijacking detection (warns if the pasted address differs from the copied one), homograph domain detection (flags Unicode lookalike domains), AVM transaction simulation via algod `/v2/transactions/simulate`, dangerous-field warnings on rekey / clawback / closeRemainderTo.
+- **Spending cap vault** — Deploy an AVM smart contract enforcing per-transaction and daily caps for autonomous agent payments. Owner actions (suspend, resume, withdraw, update limits) via mnemonic or WalletConnect.
+- **DEX swaps** — Algorand ASAs via Haystack Router (Tinyman / Pact / Folks aggregation); VOI tokens via Snowball direct pool swaps with slippage protection.
+- **Allbridge USDC bridge** — Bridge USDC from Algorand to thirteen destination chains via the Bridge tab; transactions built server-side (MCP) and signed locally, with txId-trackable transfer status.
+- **Coinbase Onramp** — Buy ALGO directly from the wallet via a one-time session-token flow; wallet addresses never appear in URL parameters.
+- **Auto-update notifications** — Daily check against the MCP `/version` endpoint; amber badge + banner when a newer release is available.
+
+See the [extension repository README](https://github.com/chopmob-cloud/AlgoVoi/blob/main/README.md) for the full hardening list (Tier I-XXIV) and the latest security audit report.
+
+## Page integration (window.algorand)
+
+The extension injects a `window.algorand` provider into every page, compatible with ARC-0027:
+
+```ts
+// Connect and get accounts
+const { accounts } = await window.algorand.enable({ genesisID: "mainnet-v1.0" });
+
+// Sign AVM transactions
+const signedTxns = await window.algorand.signTransactions([txnBase64]);
+
+// Sign arbitrary bytes (AP2 mandate hashes, AVM-side)
+const { sig } = await window.algorand.signBytes({ data: new Uint8Array([...]) });
+```
+
+For EVM chains the page receives the standard EIP-1193 provider via WalletConnect pairing (the extension acts as the WC wallet for `eip155:8453`, `eip155:5042002`, `eip155:1329`). AP2 mandate requests across all six chains flow through `window.algorand.ap2.requestPayment(cartMandate)`; the extension routes the underlying signature call to the correct chain client based on the active account.
+
+## Automatic 402 handling
+
+The extension intercepts `fetch()` and `XMLHttpRequest` calls that return HTTP 402 with `PAYMENT-REQUIRED` (x402 v1) or `WWW-Authenticate: Payment` (MPP) headers, surfaces an approval popup with the transaction details, signs locally with the active-account key, broadcasts the on-chain transaction (AVM via `algosdk`, HTS via HashPack WC, or EVM via viem + `eth_sendRawTransaction`), and retries the original request with the resulting `PAYMENT-SIGNATURE` or `Authorization: Payment` header. No page-side payment code is needed.
+
+```ts
+// This fetch triggers an approval popup if the server returns 402.
+// The extension picks the chain from the challenge's accepts[] legs and the active account.
+const response = await fetch("https://api.example.com/premium-data");
+const data = await response.json(); // resolves after payment is approved
+```
+
+MPP credentials on EVM chains carry a `did:pkh:eip155:<chainId>:<address>` source field so downstream verifiers resolve the signer to the correct chain without a translation layer; AVM credentials carry the standard `algorand:<genesis_id>` or equivalent CAIP-2 identifier.
+
+## Build and load (development)
+
+```bash
+git clone https://github.com/chopmob-cloud/AlgoVoi.git
+cd AlgoVoi
+npm install
+cp .env.example .env
+# Fill in VITE_WC_PROJECT_ID, VITE_HAYSTACK_ROUTER_API_KEY (optional)
+npm run build
+```
+
+Load `dist/` as an unpacked extension in Chrome (`chrome://extensions`, Developer mode → Load unpacked) or `dist-firefox/manifest.json` as a temporary add-on in Firefox (`about:debugging#/runtime/this-firefox`).
+
+## See also
+
+- [x402 protocol](/protocols/x402) — content paywall / API metering payment protocol
+- [MPP protocol](/protocols/mpp) — Machine Payments Protocol with `WWW-Authenticate: Payment` semantics
+- [AP2 protocol](/protocols/ap2) — Google Agent Payments Protocol mandate signing
+- [Concept: chains overview](/concepts/chains-overview) — full chain support matrix across the platform
+- [MCP server](/integrations/mcp-server) — programmatic access to the same payment surface from Claude, Cursor, and Windsurf
