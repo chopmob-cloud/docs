@@ -7,6 +7,18 @@ The **AlgoVoi Chrome extension** is the in-house browser wallet for the AlgoVoi 
 
 Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/algovoi/ofmgegnkjdmbeakjbmfaagigmhagdcbl) or build from source at [chopmob-cloud/AlgoVoi](https://github.com/chopmob-cloud/AlgoVoi).
 
+## Versions and releases
+
+The source release runs ahead of the store-reviewed builds. The store listings carry the last stable single-stack release; the six-chain v2.5.0 build ships first as a GitHub source release while store review is in progress.
+
+| Channel | Version | Date | Coverage |
+| --- | --- | --- | --- |
+| [Chrome Web Store](https://chromewebstore.google.com/detail/algovoi/ofmgegnkjdmbeakjbmfaagigmhagdcbl) | **1.0.1** | 2026-04-11 | Algorand + VOI (x402 / MPP / AP2 on AVM) |
+| [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/algovoi/) | **1.0.2** | 2026-04-09 | Algorand + VOI (x402 / MPP / AP2 on AVM) |
+| [GitHub release (latest)](https://github.com/chopmob-cloud/AlgoVoi/releases/tag/v2.5.0) | **2.5.0** | 2026-05-19 | Six chains — Algorand, VOI, Hedera, Base, Arc, Tempo; 18/18 protocol × chain |
+
+**v2.5.0 — EVM chains + 18/18 payment protocol coverage** is the current source release: <https://github.com/chopmob-cloud/AlgoVoi/releases/tag/v2.5.0>. It adds EVM (Base / Arc / Tempo) and Hedera HTS payment paths on top of the AVM (Algorand / VOI) base that the store builds already carry. Until the v2.5.0 build clears Chrome Web Store and Firefox AMO review, the six-chain coverage is available by building from source or loading the GitHub release artefact as an unpacked / temporary extension (see [Build and load](#build-and-load-development) below). Store builds remain on the stable single-stack 1.0.x line.
+
 ## Why the extension exists
 
 Most browser wallets pick one chain family (EVM, Solana, or AVM) and run with it. Agent payments cross those boundaries constantly: a buyer agent on Base settling an x402 charge for an Algorand merchant, or an MPP gateway issuing both `method="evm"` and `method="avm"` challenges for the same resource. Routing that through three separate wallets multiplies key custody, breaks the approval flow, and defeats the point of native browser-handled `fetch()` interception.
