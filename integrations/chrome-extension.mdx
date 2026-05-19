@@ -3,21 +3,21 @@ title: Chrome extension
 description: AlgoVoi's in-house browser wallet — native x402, MPP, and AP2 payment-protocol support across six chains in one Manifest V3 extension.
 ---
 
-The **AlgoVoi Chrome extension** is the in-house browser wallet for the AlgoVoi payment stack. As of **v2.5.0** (2026-05-19) it ships native x402 / MPP / AP2 support across six mainnet chains in a single extension: Algorand, VOI, Hedera, Base, Arc, and Tempo. Eighteen of eighteen protocol × chain combinations are wired in one popup, with chain-appropriate signing schemes routed transparently behind the UI.
+The **AlgoVoi Chrome extension** is the in-house browser wallet for the AlgoVoi payment stack. As of **v2.6.0** (2026-05-19) it ships native x402 / MPP / AP2 support across six mainnet chains in a single extension: Algorand, VOI, Hedera, Base, Arc, and Tempo. Eighteen of eighteen protocol × chain combinations are wired in one popup, with chain-appropriate signing schemes routed transparently behind the UI. The six-chain coverage was introduced in v2.5.0; the v2.5.x → v2.6.0 line is EVM-path hardening (Base RPC fallback, Tempo gas-limit fix, balance-display fixes) with coverage unchanged.
 
 Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/algovoi/ofmgegnkjdmbeakjbmfaagigmhagdcbl) or build from source at [chopmob-cloud/AlgoVoi](https://github.com/chopmob-cloud/AlgoVoi).
 
 ## Versions and releases
 
-The source release runs ahead of the store-reviewed builds. The store listings carry the last stable single-stack release; the six-chain v2.5.0 build ships first as a GitHub source release while store review is in progress.
+The GitHub release runs ahead of the store-reviewed builds. The store listings carry the last stable single-stack release; the six-chain build ships first as a packaged GitHub release (Chrome / Firefox / source zips attached) while store review is in progress.
 
 | Channel | Version | Date | Coverage |
 | --- | --- | --- | --- |
 | [Chrome Web Store](https://chromewebstore.google.com/detail/algovoi/ofmgegnkjdmbeakjbmfaagigmhagdcbl) | **1.0.1** | 2026-04-11 | Algorand + VOI (x402 / MPP / AP2 on AVM) |
 | [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/algovoi/) | **1.0.2** | 2026-04-09 | Algorand + VOI (x402 / MPP / AP2 on AVM) |
-| [GitHub release (latest)](https://github.com/chopmob-cloud/AlgoVoi/releases/tag/v2.5.0) | **2.5.0** | 2026-05-19 | Six chains — Algorand, VOI, Hedera, Base, Arc, Tempo; 18/18 protocol × chain |
+| [GitHub release (latest)](https://github.com/chopmob-cloud/AlgoVoi/releases/tag/v2.6.0) | **2.6.0** | 2026-05-19 | Six chains — Algorand, VOI, Hedera, Base, Arc, Tempo; 18/18 protocol × chain. Packaged zips attached (chrome / firefox / source) |
 
-**v2.5.0 — EVM chains + 18/18 payment protocol coverage** is the current source release: <https://github.com/chopmob-cloud/AlgoVoi/releases/tag/v2.5.0>. It adds EVM (Base / Arc / Tempo) and Hedera HTS payment paths on top of the AVM (Algorand / VOI) base that the store builds already carry. Until the v2.5.0 build clears Chrome Web Store and Firefox AMO review, the six-chain coverage is available by building from source or loading the GitHub release artefact as an unpacked / temporary extension (see [Build and load](#build-and-load-development) below). Store builds remain on the stable single-stack 1.0.x line.
+**v2.6.0 — Base balance fallback RPC** is the current release: <https://github.com/chopmob-cloud/AlgoVoi/releases/tag/v2.6.0>. The six-chain coverage (EVM Base / Arc / Tempo + Hedera HTS on top of the AVM Algorand / VOI base) was introduced in v2.5.0; the v2.5.x → v2.6.0 patch line hardens the EVM path (Base primary-RPC fallback to `base.publicnode.com`, Tempo USDCe gas-limit fix, ETH/USDC balance-display fixes, zero-TypeScript-error build). Protocol × chain coverage is unchanged from v2.5.0. Until the v2.6.0 build clears Chrome Web Store and Firefox AMO review, the six-chain coverage is available by downloading the packaged release zips (`algovoi-2.6.0-chrome.zip` / `-firefox.zip`) and loading them as an unpacked / temporary extension, or building from source (see [Build and load](#build-and-load-development) below). Store builds remain on the stable single-stack 1.0.x line.
 
 ## Why the extension exists
 
@@ -33,7 +33,7 @@ The AlgoVoi extension collapses the six chains AlgoVoi-the-platform settles on i
 | **MPP**  | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **AP2**  | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-All eighteen combinations wired from v2.5.0. The extension auto-detects the active chain at the page, account, or challenge level and routes the signing call through the correct chain client without user intervention.
+All eighteen combinations wired since v2.5.0 (current release v2.6.0). The extension auto-detects the active chain at the page, account, or challenge level and routes the signing call through the correct chain client without user intervention.
 
 ## Signing scheme by chain
 

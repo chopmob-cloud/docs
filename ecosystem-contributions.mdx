@@ -11,18 +11,62 @@ Every link below is a public pull request on a public repository. Each one is ve
 
 These land AlgoVoi as a canonical reference inside the protocol's own repository, not just an entry in an external list.
 
+### Spec authorship (x402)
+
+AlgoVoi authors the compliance-evidence surface of the x402 Bazaar spec directly. Status verified 2026-05-19; both open and awaiting x402 Foundation maintainer review.
+
+| Repository | PR | Status | What it adds |
+| --- | --- | --- | --- |
+| [x402-foundation/x402](https://github.com/x402-foundation/x402/pull/2322) | [#2322](https://github.com/x402-foundation/x402/pull/2322) | Open · review-required | Adds the Bazaar `Compliance` category: `evidenceType` / `evidenceShape` fields and the `anchor_chains ⊆ ∪(supported chains)` constraint. AlgoVoi-authored spec text. |
+| [x402-foundation/x402](https://github.com/x402-foundation/x402/pull/2334) | [#2334](https://github.com/x402-foundation/x402/pull/2334) | Open · review-ready | `privacy_class` settlement-plane visibility field (`public-settlement` / `attested-private` / `fully-private`). Five-commit AlgoVoi-authored arc: field definition, manifest anchoring MUST, attestation-cadence floor, per-attestation binding, auditor-availability independence, conformance-transition policy. Working-group critique (feedoracle / danielnorkin / Ilya0527) absorbed into spec text; converged. |
+| [x402-foundation/x402](https://github.com/x402-foundation/x402/pull/2211) | [#2211](https://github.com/x402-foundation/x402/pull/2211) | Open | AlgoVoi in the ecosystem-partners file as a multi-chain x402 facilitator (Algorand, VOI, Hedera, Stellar, Base, Solana, Tempo). |
+
+### Protocol samples & fixes
+
 | Protocol | Repository | PR | Status | What it adds |
 | --- | --- | --- | --- | --- |
-| **x402** | [x402-foundation/x402](https://github.com/x402-foundation/x402/pull/2211) | [#2211](https://github.com/x402-foundation/x402/pull/2211) | Open | AlgoVoi added to the ecosystem partners file as a multi-chain x402 facilitator (Algorand, VOI, Hedera, Stellar, Base, Solana, Tempo) |
-| **MPP** | [tempoxyz/mpp](https://github.com/tempoxyz/mpp/pull/556) | [#556](https://github.com/tempoxyz/mpp/pull/556) | Closed | AlgoVoi added to the canonical MPP services catalogue — closed without merge 2026-04-28; resubmission pending |
-| **AP2** | [google-agentic-commerce/AP2](https://github.com/google-agentic-commerce/AP2/pull/218) | [#218](https://github.com/google-agentic-commerce/AP2/pull/218) | Open | New `crypto-algo` human-present sample: AP2 mandate settled in USDC on Algorand |
-| **AP2** | [google-agentic-commerce/AP2](https://github.com/google-agentic-commerce/AP2/pull/228) | [#228](https://github.com/google-agentic-commerce/AP2/pull/228) | Open | New `crypto-solana` human-present sample: AP2 mandate settled via Solana Pay reference binding |
-| **AP2** | [google-agentic-commerce/AP2](https://github.com/google-agentic-commerce/AP2/pull/243) | [#243](https://github.com/google-agentic-commerce/AP2/pull/243) | Open | Docs: add normative verifier obligation for `checkout_hash` to the AP2 specification |
-| **AP2** | [google-agentic-commerce/AP2](https://github.com/google-agentic-commerce/AP2/pull/244) | [#244](https://github.com/google-agentic-commerce/AP2/pull/244) | Open | Adds `run.sh` helper for the human-present x402 scenario in the sample suite |
-| **AP2** | [google-agentic-commerce/AP2](https://github.com/google-agentic-commerce/AP2/pull/249) | [#249](https://github.com/google-agentic-commerce/AP2/pull/249) | Open | Fix: resolve all Biome lint errors in the AP2 web-client source |
-| **AP2** | [google-agentic-commerce/AP2](https://github.com/google-agentic-commerce/AP2/pull/253) | [#253](https://github.com/google-agentic-commerce/AP2/pull/253) | Open | Fix: implement JCS cart-to-payment mandate binding per RFC 8785 — supersedes #251 |
-| **Solana Actions** | [sendaifun/solana-agent-kit](https://github.com/sendaifun/solana-agent-kit/pull/561) | [#561](https://github.com/sendaifun/solana-agent-kit/pull/561) | Open | AlgoVoi added as a `plugin-blinks` provider so any agent using `solana-agent-kit` can mint and pay AlgoVoi blinks |
-| **Solana docs** | [solana-foundation/solana-com](https://github.com/solana-foundation/solana-com/pull/1413) | [#1413](https://github.com/solana-foundation/solana-com/pull/1413) | Open | AlgoVoi documented in the Solana Foundation's x402 page |
+| **MPP** | [tempoxyz/mpp](https://github.com/tempoxyz/mpp/pull/633) | [#633](https://github.com/tempoxyz/mpp/pull/633) | Open | AlgoVoi added to the MPP services catalogue (resubmission after #556 closed 2026-04-28). |
+| **AP2** | [google-agentic-commerce/AP2](https://github.com/google-agentic-commerce/AP2/pull/218) | [#218](https://github.com/google-agentic-commerce/AP2/pull/218) | Open · blocked on #249 | `crypto-algo` human-present sample: AP2 mandate settled in USDC on Algorand. CLA + spellcheck green; gated only by repo-wide Biome lint, which #249 fixes. |
+| **AP2** | [google-agentic-commerce/AP2](https://github.com/google-agentic-commerce/AP2/pull/228) | [#228](https://github.com/google-agentic-commerce/AP2/pull/228) | Open · blocked on #249 | `crypto-solana` human-present sample: AP2 mandate settled via Solana Pay reference binding. Same lint gate as #218. |
+| **AP2** | [google-agentic-commerce/AP2](https://github.com/google-agentic-commerce/AP2/pull/249) | [#249](https://github.com/google-agentic-commerce/AP2/pull/249) | Open · the unblocker | Resolves all pre-existing Biome lint errors in the AP2 web-client. Own CI fully green; unblocks #218/#228/#253. Awaiting Google maintainer review — the single bottleneck for the AP2 cluster. |
+| **AP2** | [google-agentic-commerce/AP2](https://github.com/google-agentic-commerce/AP2/pull/253) | [#253](https://github.com/google-agentic-commerce/AP2/pull/253) | Open · blocked on #249 | JCS cart-to-payment mandate binding per RFC 8785 (supersedes #251). |
+| **AP2** | [google-agentic-commerce/AP2](https://github.com/google-agentic-commerce/AP2/pull/243) | [#243](https://github.com/google-agentic-commerce/AP2/pull/243) | Open | Docs: normative verifier obligation for `checkout_hash` in the AP2 spec. |
+| **AP2** | [google-agentic-commerce/AP2](https://github.com/google-agentic-commerce/AP2/pull/244) | [#244](https://github.com/google-agentic-commerce/AP2/pull/244) | Open | `run.sh` helper for the human-present x402 scenario in the sample suite. |
+| **Solana Actions** | [sendaifun/solana-agent-kit](https://github.com/sendaifun/solana-agent-kit/pull/561) | [#561](https://github.com/sendaifun/solana-agent-kit/pull/561) | Open | AlgoVoi as a `plugin-blinks` provider for any `solana-agent-kit` agent. |
+| **Solana docs** | [solana-foundation/solana-com](https://github.com/solana-foundation/solana-com/pull/1413) | [#1413](https://github.com/solana-foundation/solana-com/pull/1413) | Open | AlgoVoi documented in the Solana Foundation x402 page. |
+
+### Conformance fixtures & reference artefacts
+
+Cross-implementation conformance surfaces AlgoVoi seeds so interop is anchored to a deterministic target rather than independent convergence. The hosted artefacts are live and self-verifying; the suite PRs are open.
+
+| Surface | Location | Status | What it anchors |
+| --- | --- | --- | --- |
+| Proxy-chain RFC 9421 fixture | [aeoess/aps-conformance-suite#5](https://github.com/aeoess/aps-conformance-suite/pull/5) | Open | 3-hop production proxy chain, RFC 9421 signature survival, tcpdump byte-level E2E proof. |
+| Multi-chain Ed25519 fixture | [aeoess/aps-conformance-suite#6](https://github.com/aeoess/aps-conformance-suite/pull/6) | Open | Substrate independence: same JCS canonicalisation across AVM / Hedera / EVM signing. |
+| Cross-extension v0 vector set | `https://api.algovoi.co.uk/.well-known/cross-extension/v0.json` | Live | Settlement / receipt / reputation adversarial-conformance envelope (5 attack classes), Ed25519-signed, `rfc8785@0.1.4`. |
+| AP2 `open_mandate_hash` v0 | [gist](https://gist.github.com/chopmob-cloud/1dca25fd6107db4b7a30bed5dbf2ded8) | Live | JCS+SHA-256 over the AP2 Open Checkout Mandate body; 7 pair-structured vectors anchoring `open_mandate_hash` derivation. |
+
+### Data & registry
+
+| Repository | PR | Status | What it adds |
+| --- | --- | --- | --- |
+| [electric-capital/open-dev-data](https://github.com/electric-capital/open-dev-data/pull/2874) | [#2874](https://github.com/electric-capital/open-dev-data/pull/2874) | **Merged** | AlgoVoi MCP Server added to the Electric Capital crypto-ecosystems dataset under Algorand. |
+
+## Standards-discussion authorship
+
+Where AlgoVoi authors or shapes spec text inside a protocol's own RFC / working-group discussion, not just files a PR against it. Status verified 2026-05-19; conservative wording (ratified / converged / authoring / seeded) reflects actual state, not aspiration.
+
+| Thread | Venue | AlgoVoi role | Status |
+| --- | --- | --- | --- |
+| [x402#2326](https://github.com/x402-foundation/x402/issues/2326) → [#2334](https://github.com/x402-foundation/x402/pull/2334) | x402 Bazaar working group | Sole author of the `privacy_class` settlement-visibility spec surface; absorbed feedoracle / danielnorkin / Ilya0527 critique across a five-commit arc | Converged, review-ready |
+| [a2aproject/A2A#1734](https://github.com/a2aproject/A2A/discussions/1734) | CTEF v0.3.x RFC | Authors 3 of 7 rows in the v0.3.3 cross-extension fixture matrix (identity-anchor, structural-identity `foxbook × algovoi-proxy-chain`, settlement-retention `urn:x402:audit-chain`) + the cryptographic-class injectivity framing | Maintainer-ratified 2026-05-19; authoring on staging-branch cut |
+| [a2aproject/A2A#1734](https://github.com/a2aproject/A2A/discussions/1734) | CTEF v0.3.2 publish (Wed 2026-05-27) | Three-DID resolver surface (`did:web` + `did:foxbook` + `did:key`) cited as worked-example #4 for substrate-and-primitive layering | Resolver surface frozen for the cite window |
+| [a2aproject/A2A#1576](https://github.com/a2aproject/A2A/discussions/1576) | A2A Settlement Extension | Seeded the canonical cross-extension v0 adversarial-conformance envelope; co-implementers PR categories into the AlgoVoi-hosted artefact | v0 live; category PRs inbound |
+| [a2aproject/A2A#1858](https://github.com/a2aproject/A2A/discussions/1858) | TaskState.PAUSED RFC | Contributed the `PAUSED_BY_CLIENT(reason: compliance_review)` binding tying the lifecycle state to the CTEF §A REVIEW outcome | Design input on record |
+| [cloakmaster/foxbook#79](https://github.com/cloakmaster/foxbook/discussions/79) | Foxbook integration ADR | Named integrator; leaf-7 + typed-reference v1.0 + three-DID coexistence shape | ADR ratification ~2026-05-21, no objection |
+| [AP2#262](https://github.com/google-agentic-commerce/AP2/discussions/262) / [#254](https://github.com/google-agentic-commerce/AP2/discussions/254) | AP2 community | Seeded the `open_mandate_hash` v0 conformance vector set; JCS + four-state mandate patterns adopted by cycles-ap2-python and Zolofy | v0 live; independent adopters converging |
+
+The throughline: AlgoVoi contributes converged spec text and deterministic conformance artefacts, scoped as seeds the protocol communities own long-term, not vendor-proprietary surfaces. URN rows are protocol-scoped (`urn:x402:`, `urn:foxbook:`), not vendor-scoped.
 
 ## Agent framework integrations
 
