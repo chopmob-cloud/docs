@@ -114,7 +114,7 @@ MPP subscriptions are designed for AI agents paying for resources autonomously. 
 
 3. **Credential post** — the agent re-submits the request with `Authorization: Payment` containing the authority tx ID and signed proof.
 
-4. **Activation** — AlgoVoi's activation reaper confirms the authority tx is on-chain (via `verify_authority_tx` per-chain), then transitions the subscription `pending → active`. Returns a `subscriptionId`.
+4. **Activation** — When the credential is posted synchronously, AlgoVoi verifies the authority tx inline (via `verify_authority_tx` per-chain) and returns `status: "active"` with a base64url `subscriptionId` and a `Payment-Receipt` header. If the authority tx isn't yet confirmed on chain at credential-post time, the subscription is created in `pending` status and the activation reaper transitions it to `active` once the tx lands (typically within 60 seconds).
 
 5. **Autonomous pulls** — AlgoVoi's pull reaper fires every 120 seconds, finds active subscriptions where `next_due_at ≤ now`, executes the on-chain pull, and advances `next_due_at` by the agreed period.
 
@@ -159,17 +159,36 @@ WWW-Authenticate: Payment protocol="MPP" version="1.0"
   request="BASE64URL_REQUEST_OBJECT"
 ```
 
-When the agent posts a valid credential, the gateway returns:
+When the agent posts a valid credential, the gateway returns `HTTP/1.1 200 OK` with:
 
-```json
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: private
+Payment-Receipt: subscriptionId="gIom4-F_S4qDyD7Hq9EFjw", intent="subscription",
+                 periodCount="1", periodUnit="month"
+
 {
-  "subscriptionId": "uuid",
-  "status": "pending",
-  "nextDueAt": "2026-06-12T12:00:00Z"
+  "subscriptionId": "gIom4-F_S4qDyD7Hq9EFjw",
+  "status": "active",
+  "periodCount": 1,
+  "periodUnit": "month",
+  "nextDueAt": "2026-06-12T12:00:00Z",
+  "expiresAt": "2027-05-12T00:00:00Z"
 }
 ```
 
-Status transitions to `active` once the activation reaper confirms the authority tx (typically within 60 seconds).
+`subscriptionId` is the base64url-no-padding form of an internal UUID per [draft-payment-intent-subscription-00 §Subscription Identifier](https://github.com/tempoxyz/mpp-specs/pull/230). The same value is also returned in the `Payment-Receipt` response header so clients following the I-D.httpauth-payment receipt convention can consume it without parsing the JSON body.
+
+### Idempotency
+
+Subscription activation honours the `Idempotency-Key` request header per [draft-ietf-httpapi-idempotency-key-header §2.5](https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/):
+
+- Same `Idempotency-Key` + same request payload (resource + credential) → cached `200` response, byte-identical to the first activation (same `subscriptionId`, same `Payment-Receipt`).
+- Same `Idempotency-Key` + a **different** request payload → `422 Unprocessable Entity`. The key has been reused with a new payload, which the spec treats as misuse.
+- No `Idempotency-Key` header → a credential replay of the same challenge is rejected as `401` (single-use per [draft-payment-intent-subscription-00 §Single-Use](https://github.com/tempoxyz/mpp-specs/pull/230)). Send a fresh challenge to retry.
+
+Keys are tenant-scoped, so two tenants can independently use the same opaque string without colliding.
 
 ### Subscription lifecycle
 

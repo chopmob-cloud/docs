@@ -240,7 +240,28 @@ WWW-Authenticate: Payment realm="api.algovoi.co.uk" method="algorand"
   nonce="..." expires="..." request="<base64url>"
 ```
 
-The agent signs an on-chain authority tx, then re-submits with `Authorization: Payment`. AlgoVoi confirms the tx is on-chain (typically within 60 seconds), activates the subscription, and returns a `subscriptionId`.
+The agent signs an on-chain authority tx, then re-submits with `Authorization: Payment`. AlgoVoi confirms the tx is on-chain (typically within 60 seconds), activates the subscription, and returns a base64url `subscriptionId` in both the response body and a `Payment-Receipt` header. Clients may include an `Idempotency-Key` header on retries to get the cached response instead of a replay rejection — see [Recurring payments — Idempotency](/concepts/recurring#idempotency).
+
+On successful activation the gateway returns:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: private
+Payment-Receipt: subscriptionId="gIom4-F_S4qDyD7Hq9EFjw", intent="subscription",
+                 periodCount="1", periodUnit="month"
+
+{
+  "subscriptionId": "gIom4-F_S4qDyD7Hq9EFjw",
+  "status": "active",
+  "periodCount": 1,
+  "periodUnit": "month",
+  "nextDueAt": "2026-06-12T12:00:00Z",
+  "expiresAt": "2027-05-12T00:00:00Z"
+}
+```
+
+The `subscriptionId` is base64url-no-padding per [draft-payment-intent-subscription-00 §Subscription Identifier](https://github.com/tempoxyz/mpp-specs/pull/230); internally it remains a 16-byte UUID, so it round-trips losslessly.
 
 ### Subscription routes
 
