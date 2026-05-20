@@ -240,7 +240,7 @@ WWW-Authenticate: Payment realm="api.algovoi.co.uk" method="algorand"
   nonce="..." expires="..." request="<base64url>"
 ```
 
-The agent signs an on-chain authority tx, then re-submits with `Authorization: Payment`. AlgoVoi confirms the tx is on-chain (typically within 60 seconds), activates the subscription, and returns a base64url `subscriptionId` in both the response body and a `Payment-Receipt` header. Clients may include an `Idempotency-Key` header on retries to get the cached response instead of a replay rejection — see [Recurring payments — Idempotency](/concepts/recurring#idempotency).
+The agent signs an on-chain authority tx, then re-submits with `Authorization: Payment`. AlgoVoi verifies the authority tx inline **and executes the first-period charge on chain before returning** ([draft-payment-intent-subscription-00 §Activation](https://github.com/tempoxyz/mpp-specs/pull/230) L396-407). Activation succeeds only when the first pull is broadcast-accepted; the response carries `status: "active"`, a base64url `subscriptionId`, a `first_pull_tx_id`, and a `Payment-Receipt` header. Clients may include an `Idempotency-Key` header on retries to get the cached response instead of a replay rejection — see [Recurring payments — Idempotency](/concepts/recurring#idempotency).
 
 On successful activation the gateway returns:
 
@@ -257,11 +257,14 @@ Payment-Receipt: subscriptionId="gIom4-F_S4qDyD7Hq9EFjw", intent="subscription",
   "periodCount": 1,
   "periodUnit": "month",
   "nextDueAt": "2026-06-12T12:00:00Z",
-  "expiresAt": "2027-05-12T00:00:00Z"
+  "expiresAt": "2027-05-12T00:00:00Z",
+  "first_pull_tx_id": "0xabc..."
 }
 ```
 
-The `subscriptionId` is base64url-no-padding per [draft-payment-intent-subscription-00 §Subscription Identifier](https://github.com/tempoxyz/mpp-specs/pull/230); internally it remains a 16-byte UUID, so it round-trips losslessly.
+The `subscriptionId` is base64url-no-padding per [draft-payment-intent-subscription-00 §Subscription Identifier](https://github.com/tempoxyz/mpp-specs/pull/230); internally it remains a 16-byte UUID, so it round-trips losslessly. `first_pull_tx_id` is the on-chain tx that collected the first period; a background finality monitor watches it until per-chain confirmation depth is reached and flips the subscription to `status: "revoked"` if the tx is orphaned before finality.
+
+If the first-period charge can't be collected (insufficient allowance, wallet balance, etc.) the gateway returns `402 Payment Required` rather than activating — the agent retries with a fresh challenge after resolving the cause. A facilitator-side timeout returns `504`.
 
 ### Subscription routes
 
@@ -273,12 +276,17 @@ The `subscriptionId` is base64url-no-padding per [draft-payment-intent-subscript
 ### Lifecycle
 
 ```
-pending  →  active     (activation reaper confirms authority tx on-chain; ≤60s)
-         →  expired    (authority tx not found within 24h)
-active   →  cancelled  (operator or agent request)
+(synchronous activation, atomic with first-period charge)
+  authority verify  →  first-pull broadcast-accepted  →  active
+                                                       →  402 (pull failed)
+
+(post-activation, async)
+  active  →  revoked   (first-pull dropped pre-finality)
+          →  cancelled (operator or agent request)
+          →  expired   (sub_expires_at reached)
 ```
 
-Once `active`, AlgoVoi's pull reaper fires every 120 seconds and executes each due pull autonomously. The agent receives no further prompts.
+Once `active`, AlgoVoi's pull reaper fires every 120 seconds and executes each subsequent period's pull autonomously (the first period was already charged at activation). The agent receives no further prompts.
 
 See [Recurring payments — MPP subscriptions](/concepts/recurring#mpp-subscriptions-agent-native-standing-authority) for the full lifecycle, wire format, and resource setup details.
 

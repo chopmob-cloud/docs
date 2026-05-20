@@ -114,9 +114,9 @@ MPP subscriptions are designed for AI agents paying for resources autonomously. 
 
 3. **Credential post** — the agent re-submits the request with `Authorization: Payment` containing the authority tx ID and signed proof.
 
-4. **Activation** — When the credential is posted synchronously, AlgoVoi verifies the authority tx inline (via `verify_authority_tx` per-chain) and returns `status: "active"` with a base64url `subscriptionId` and a `Payment-Receipt` header. If the authority tx isn't yet confirmed on chain at credential-post time, the subscription is created in `pending` status and the activation reaper transitions it to `active` once the tx lands (typically within 60 seconds).
+4. **Activation (atomic with first-period charge)** — AlgoVoi verifies the authority tx inline, then **executes the first-period pull on chain synchronously** before returning. Activation succeeds only when the first pull is broadcast-accepted by the chain (the "soft success" threshold). The response carries `status: "active"`, a base64url `subscriptionId`, a `first_pull_tx_id`, and a `Payment-Receipt` header. A background finality monitor watches the first-pull tx until the configured per-chain depth is reached; if the tx is dropped or orphaned before finality, the subscription is flipped to `status: "revoked"` and the agent must restart with a fresh authority.
 
-5. **Autonomous pulls** — AlgoVoi's pull reaper fires every 120 seconds, finds active subscriptions where `next_due_at ≤ now`, executes the on-chain pull, and advances `next_due_at` by the agreed period.
+5. **Autonomous renewals** — AlgoVoi's pull reaper fires every 120 seconds, finds active subscriptions where `next_due_at ≤ now` (`next_due_at = activation_anchor + 1 period` after the first-period charge above), executes the on-chain pull, and advances `next_due_at` anchor-relative. Missed periods don't accumulate authority — a delayed reaper skips past missed boundaries to the next future one in a single step (per [draft-payment-intent-subscription-00 L422-425](https://github.com/tempoxyz/mpp-specs/pull/230)).
 
 ### Resource setup
 
@@ -174,11 +174,12 @@ Payment-Receipt: subscriptionId="gIom4-F_S4qDyD7Hq9EFjw", intent="subscription",
   "periodCount": 1,
   "periodUnit": "month",
   "nextDueAt": "2026-06-12T12:00:00Z",
-  "expiresAt": "2027-05-12T00:00:00Z"
+  "expiresAt": "2027-05-12T00:00:00Z",
+  "first_pull_tx_id": "0xabc..."
 }
 ```
 
-`subscriptionId` is the base64url-no-padding form of an internal UUID per [draft-payment-intent-subscription-00 §Subscription Identifier](https://github.com/tempoxyz/mpp-specs/pull/230). The same value is also returned in the `Payment-Receipt` response header so clients following the I-D.httpauth-payment receipt convention can consume it without parsing the JSON body.
+`subscriptionId` is the base64url-no-padding form of an internal UUID per [draft-payment-intent-subscription-00 §Subscription Identifier](https://github.com/tempoxyz/mpp-specs/pull/230). The same value is also returned in the `Payment-Receipt` response header so clients following the I-D.httpauth-payment receipt convention can consume it without parsing the JSON body. `first_pull_tx_id` is the chain tx that collected the first period's charge as part of activation; clients may inspect it on-chain or wait for the finality monitor to mark `first_pull_finalized_at` (the same status surfaces through the `revoked` lifecycle transition if finality is never reached).
 
 ### Idempotency
 
@@ -193,10 +194,17 @@ Keys are tenant-scoped, so two tenants can independently use the same opaque str
 ### Subscription lifecycle
 
 ```
-pending  →  active     (activation reaper confirms authority tx on-chain)
-         →  expired    (authority tx not found within 24h TTL)
-active   →  cancelled  (operator cancel or agent request)
+(synchronous activation)
+  authority verify → first-period pull broadcast-accepted → active
+                                                          → 402 / 504 (pull failed)
+
+(post-activation, async)
+  active  →  revoked   (first-pull tx dropped pre-finality or finality timeout)
+          →  cancelled (operator cancel or agent request)
+          →  expired   (sub_expires_at reached or pull authority lapsed)
 ```
+
+`revoked` is distinct from `cancelled` and `expired`: it signals that activation returned success but the on-chain first-period charge subsequently failed to reach finality. Agents that see `status: "revoked"` on a subscription they believed was active should treat it as a hard fail and restart with a fresh authority.
 
 ### Supported chains
 
