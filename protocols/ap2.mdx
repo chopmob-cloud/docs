@@ -74,6 +74,49 @@ A working [AP2 over A2A v1.0 REST + MCP](https://api.algovoi.co.uk/.well-known/a
 - `create-checkout` skill (agent-initiated AP2 mandate exercise)
 - `check-status` skill
 
+## Canonicalisation conformance
+
+AP2 mandates carry an `open_mandate_hash` field that identifies the mandate stably across the agent, the credential provider, and the merchant. The hash needs to be implementation-independent — two parties must derive the same bytes from the same mandate body, or interop breaks silently.
+
+AlgoVoi follows this derivation rule:
+
+```
+open_mandate_hash = SHA-256(JCS_RFC8785(unsigned open-checkout-mandate body))
+```
+
+Lowercase hex output. **Hash input is the claims object, not the JWS compact form.** This is the load-bearing interop subtlety — JWS re-encoding by intermediaries changes the envelope even when the underlying payload is identical, which would silently break hash matching between implementations that round-trip through different JWS libraries.
+
+### v0 conformance vectors
+
+We published a 7-vector reference set anchored to AP2's [`open_checkout_mandate.json`](https://github.com/google-agentic-commerce/AP2/blob/main/code/sdk/schemas/ap2/open_checkout_mandate.json) schema (sha `e3d9cafa`), structured as pairs so the canonicalisation rules are self-checking:
+
+| Vector | Pair | Rule |
+| --- | --- | --- |
+| `baseline-001` | — | reference baseline |
+| `object-key-order-002` | with 001 | JCS sorts object members → byte-identical to 001 |
+| `array-order-003` | with 001 | arrays are order-significant; do NOT sort → differs from 001 |
+| `optional-fields-004` | with 001 | presence is not absence; not collapsed → differs from 001 |
+| `currency-minor-unit-005` | — | ISO-4217 integer minor units; no decimal/float |
+| `unicode-nfc-006a` | with 006b | RFC 8785 does NO Unicode normalisation |
+| `unicode-nfd-006b` | with 006a | NFC and NFD inputs hash differently |
+
+The array-order and Unicode pairs are the ones that catch divergence in practice. An implementer who sorts arrays "to canonicalise" or who NFC-normalises merchant strings before hashing matches the wrong vector immediately, rather than silently producing an incompatible hash.
+
+### Cross-implementation validation
+
+| Implementation | Authors | Language | Result |
+| --- | --- | --- | --- |
+| [`rfc8785@0.1.4`](https://pypi.org/project/rfc8785/) | William Woodruff | Python 3.14.3 | 7/7 JCS bytes + 7/7 hashes + 4/4 pair invariants ✓ |
+| [`canonicalize@3.0.0`](https://www.npmjs.com/package/canonicalize) | Samuel Erdtman + Anders Rundgren (contributor — RFC 8785 author) | JavaScript | 7/7 JCS bytes + 7/7 hashes + 4/4 pair invariants ✓ |
+
+Different authors, different languages, entirely different codebases — identical canonical bytes and identical hashes for every vector. The Unicode NFC-vs-NFD pair (the canonicalisation edge case where RFC 8785 implementations most often diverge) agrees byte-for-byte under both impls, which is the direct evidence that the no-Unicode-normalisation rule is implementation-independent, not a single-library artefact.
+
+### References
+
+- [v0 conformance vectors gist](https://gist.github.com/chopmob-cloud/1dca25fd6107db4b7a30bed5dbf2ded8) — the 7 paired vectors with their canonical JCS bytes and expected hashes
+- [AP2 issue #265](https://github.com/google-agentic-commerce/AP2/issues/265) — formal proposal to adopt the v0 set as spec-level conformance fixtures
+- [AP2 Discussion #262](https://github.com/google-agentic-commerce/AP2/discussions/262) — full validation history, including the rfc8785 + canonicalize cross-impl runs
+
 ## See also
 
 - [A2A](/protocols/a2a) is the transport AP2 typically rides on
