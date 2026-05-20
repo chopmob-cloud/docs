@@ -3,9 +3,9 @@ title: MCP server
 description: Expose AlgoVoi as MCP tools to Claude Desktop, Claude Code, Cursor, Windsurf, or any MCP-compatible assistant.
 ---
 
-The AlgoVoi MCP server (v1.4.3 on both Python and TypeScript as of 2026-05-17) lets any [Model Context Protocol](https://modelcontextprotocol.io) client call AlgoVoi's gateway as if its tools were native. An assistant can create payment links, verify transactions, probe MPP endpoints, screen recipients, generate protocol challenges, call payment-gated A2A agents, and manage recurring payment authorities — all from a normal conversation.
+The AlgoVoi MCP server (v1.5.0 on both Python and TypeScript as of 2026-05-20) lets any [Model Context Protocol](https://modelcontextprotocol.io) client call AlgoVoi's gateway as if its tools were native. An assistant can create payment links, verify transactions, probe MPP endpoints, screen recipients, generate protocol challenges, call payment-gated A2A agents, manage recurring payment authorities, and now drive MPP subscription lifecycles — all from a normal conversation.
 
-## 25 tools
+## 28 tools
 
 ### Payment tools
 
@@ -50,6 +50,16 @@ Eight tools for standing-authority subscriptions — the customer authorises a s
 | `pause_authority` | Pause cycle pulls without revoking |
 | `resume_authority` | Resume a paused authority |
 | `manual_pull` | Trigger a one-off pull (catch-up or proration) |
+
+### MPP subscription tools
+
+Three tools for the MPP-protocol subscription lifecycle ([tempoxyz/mpp-specs#230](https://github.com/tempoxyz/mpp-specs/pull/230) — `draft-payment-intent-subscription-00`). Distinct from Tier 2 above: MPP subscriptions are on-chain per-period pulls executed by the facilitator, settled to `payment_ledger` with hash-chain audit retention. Webhook events emitted: `mpp_subscription.activated`, `.charged`, `.revoked`, `.expired`.
+
+| Tool | Action |
+| --- | --- |
+| `try_mpp_subscription` | Probe a public `/mpp/sub/{tenant_short_id}/{resource_id}` URL; parse the 402 dual envelope and surface subscription-specific extras (periodCount, periodUnit, intent, payTo, amount, asset) so agents can present the terms before submitting a signed authority credential. Unauthenticated. |
+| `list_mpp_subscriptions` | List the tenant's MPP subscriptions with first_pull_tx_id, first_pull_finalized_at, status, next_due_at, activated_at. Optional status filter. Requires admin-scope API key. |
+| `cancel_mpp_subscription` | Cancel an active MPP subscription — next due renewal pull will not execute; current period's already-paid access is unaffected. Idempotent. Requires admin-scope API key. |
 
 ### Discovery and compliance tools
 
@@ -111,10 +121,10 @@ Eight tools for standing-authority subscriptions — the customer authorises a s
 
 | Implementation | Package | Versioned install |
 | --- | --- | --- |
-| **Python** `algovoi-mcp` | [pypi.org/project/algovoi-mcp/1.4.3](https://pypi.org/project/algovoi-mcp/1.4.3/) | `uvx algovoi-mcp==1.4.3` |
-| **TypeScript** `@algovoi/mcp-server` | [npmjs.com/package/@algovoi/mcp-server](https://www.npmjs.com/package/@algovoi/mcp-server) | `npx -y @algovoi/mcp-server@1.4.3` |
+| **Python** `algovoi-mcp` | [pypi.org/project/algovoi-mcp/1.5.0](https://pypi.org/project/algovoi-mcp/1.5.0/) | `uvx algovoi-mcp==1.5.0` |
+| **TypeScript** `@algovoi/mcp-server` | [npmjs.com/package/@algovoi/mcp-server](https://www.npmjs.com/package/@algovoi/mcp-server) | `npx -y @algovoi/mcp-server@1.5.0` |
 
-Both expose the same 25 tools across all 8 chains (Base, Algorand, Solana, Stellar, Hedera, Tempo, VOI, and ARC testnet). Functional behaviour is identical.
+Both expose the same 28 tools across all 8 chains (Base, Algorand, Solana, Stellar, Hedera, Tempo, VOI, and ARC testnet). Functional behaviour is identical.
 
 ## Wiring it into Claude Desktop
 
@@ -151,7 +161,7 @@ Or pin to a specific version:
   "mcpServers": {
     "algovoi": {
       "command": "npx",
-      "args": ["-y", "@algovoi/mcp-server@1.4.1"],
+      "args": ["-y", "@algovoi/mcp-server@1.5.0"],
       "env": {
         "ALGOVOI_API_KEY": "algv_…",
         "ALGOVOI_TENANT_ID": "your-tenant-id",
@@ -173,7 +183,7 @@ Or pin to a specific version:
   "mcpServers": {
     "algovoi": {
       "command": "uvx",
-      "args": ["algovoi-mcp==1.4.2"],
+      "args": ["algovoi-mcp==1.5.0"],
       "env": {
         "ALGOVOI_API_KEY": "algv_…",
         "ALGOVOI_TENANT_ID": "your-tenant-id",
